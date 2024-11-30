@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>File Converter</title>
+    <script>
+    (function() {
+  function setTheme() {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const body = document.body;
+    const nav = document.querySelector('.fixed-nav');
+    
+    if (isDarkMode) {
+      body.classList.add('dark-theme');
+      nav.classList.add('dark-theme');
+    } else {
+      body.classList.remove('dark-theme');
+      nav.classList.remove('dark-theme');
+    }
+  }
+
+  // Set theme on load
+  setTheme();
+
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+})();
+
+    </script>
+  </head>
+  <body>
+    <%- include('../partials/navbar') %> 
+    <%- include('../partials/header') %>
+    <div class="container">
+      <form
+        action="/convert"
+        method="POST"
+        enctype="multipart/form-data"
+        style="display: flex; align-items: flex-start"
+      >
+        <div style="flex: 1; margin-right: 20px">
+          <div role="presentation" tabindex="0" class="upload-box">
+            <label for="file-upload">
+              <input
+                id="file-upload"
+                accept="image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.ico,.tif,.tiff,.raw,.tga,audio/*,video/*"
+                multiple
+                name="file"
+                type="file"
+                required
+                onchange="previewFiles(event)"
+              />
+              <div class="space-y-4 text-foreground">
+                <div class="flex justify-center text-6xl">
+                  <svg
+                    stroke="currentColor"
+                    fill="none"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    height="1em"
+                    width="1em"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <polyline points="16 16 12 12 8 16"></polyline>
+                    <line x1="12" y1="12" x2="12" y2="21"></line>
+                    <path
+                      d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"
+                    ></path>
+                  </svg>
+                </div>
+                <h3 class="text-2xl font-medium text-center">
+                  Click, or drop your files here
+                </h3>
+              </div>
+            </label>
+          </div>
+
+          <!-- Dropdown for format selection -->
+          <label for="format-select">Select Output Format:</label>
+          <select id="format-select" name="format" required>
+            <option value="">--Choose a format--</option>
+            <optgroup label="Images">
+              <option value="jpeg">JPEG</option>
+              <option value="png">PNG</option>
+              <option value="webp">WEBP</option>
+            </optgroup>
+            <optgroup label="Audio">
+              <option value="mp3">MP3</option>
+              <option value="wav">WAV</option>
+              <option value="ogg">OGG</option>
+            </optgroup>
+          </select>
+
+          <!-- Submit button -->
+          <button type="submit">Convert Files</button>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="preview-container" style="flex: 1">
+          <!-- Image Preview -->
+          <img
+            id="image-preview"
+            alt="Image Preview"
+            style="
+              max-width: 300px;
+              display: none;
+              border: 1px solid #ccc;
+              border-radius: 5px;
+            "
+          />
+
+          <!-- Audio Preview -->
+          <audio
+            id="audio-preview"
+            controls
+            style="display: none; margin-top: 10px"
+          >
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+      </form>
+
+      <!-- Function to preview files -->
+      <script>
+        function previewFiles(event) {
+          const files = event.target.files;
+          const imagePreview = document.getElementById("image-preview");
+          const audioPreview = document.getElementById("audio-preview");
+
+          // Reset previews
+          imagePreview.style.display = "none";
+          audioPreview.style.display = "none";
+
+          // Loop through selected files
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            // Check if the file is an image
+            if (file.type.startsWith("image/")) {
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = "block"; // Show image preview
+              };
+              reader.readAsDataURL(file);
+            }
+
+            // Check if the file is audio
+            else if (file.type.startsWith("audio/")) {
+              const url = URL.createObjectURL(file);
+              audioPreview.src = url;
+              audioPreview.style.display = "block"; // Show audio preview
+            }
+          }
+        }
+      </script>
+    </div>
+    <%- include('../partials/footer') %>
+  </body>
+</html>

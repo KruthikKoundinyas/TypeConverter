@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Conversion Result</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <script>
+      (function() {
+        function setTheme() {
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const body = document.body;
+          const nav = document.querySelector('.fixed-nav');
+          
+          if (isDarkMode) {
+            body.classList.add('dark');
+            nav.classList.add('dark');
+          } else {
+            body.classList.remove('dark');
+            nav.classList.remove('dark');
+          }
+        }
+
+        // Set theme on load
+        setTheme();
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+      })();
+    </script>
+
+    <style>
+      /* Centering the error message */
+      .error-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+      }
+
+      .error-message {
+        background-color: #fff;
+        padding: 20px;
+        text-align: center;
+        font-size: 18px;
+        border-radius: 10px;
+        width: 75%;
+        max-width: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <% if (locals.error) { %> <!-- Fixed error variable access -->
+      <div class="error-container">
+        <p class="error-message">
+          <button onclick="closeError()">X</button>
+          <%= error %>
+        </p>
+      </div>
+    <% } %>
+
+    <!-- Main Content -->
+    <%- include('../partials/navbar') %>
+    <%- include('../partials/header') %>
+    <h1>Conversion Result</h1>
+    <p>Your files have been converted successfully!</p>
+    
+    <% files.forEach(file => { %>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <a href="/uploads/<%= file %>" download>
+        <img src="https://cdn-icons-png.flaticon.com/128/11480/11480539.png" alt="Download Icon" style="width: 10vh; height: 10vh; margin-right: 10px; margin-left: 10px;" />
+        Download Converted File: <%= file %>
+      </a>
+
+      <div id="preview-container" style="flex: 1; margin-top: 10px; display: flex; justify-content: center; align-items: center;">
+        <!-- Image Preview -->
+        <img
+          id="image-preview"
+          class="file-preview"
+          alt="Image Preview"
+          style="max-width: 300px; display: none; border: 1px solid #ccc; border-radius: 5px;"
+          src="/uploads/<%= file %>" 
+        />
+
+        <!-- Audio Preview -->
+        <audio
+          id="audio-preview"
+          class="file-preview"
+          controls
+          style="display: none; margin-top: 10px"
+        >
+          Your browser does not support the audio element.
+          <source src="/uploads/<%= file %>" type="audio/<%= file.split('.').pop() %>" />
+        </audio>
+      </div>
+
+      <script>
+        // Get the file extension
+        const file = "<%= file %>";
+        const fileExtension = file.split('.').pop().toLowerCase();
+
+        // Check the file extension and show the appropriate preview
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(fileExtension)) {
+          // Show image preview
+          document.getElementById('image-preview').style.display = 'block';
+          document.getElementById('audio-preview').style.display = 'none';
+        } else if (['mp3', 'wav', 'ogg', 'flac'].includes(fileExtension)) {
+          // Show audio preview
+          document.getElementById('image-preview').style.display = 'none';
+          document.getElementById('audio-preview').style.display = 'block';
+        } else {
+          // If file type is unknown, hide both previews or show an error message
+          document.getElementById('image-preview').style.display = 'none';
+          document.getElementById('audio-preview').style.display = 'none';
+          alert('Unsupported file type');
+        }
+      </script>
+    </div>
+    <% }) %>
+
+    <script>
+      function closeError() {
+        document.querySelector('.error-container').style.display = 'none';
+      }
+    </script>
+    
+    <br />
+    <%- include('../partials/footer') %>
+  </body>
+</html>

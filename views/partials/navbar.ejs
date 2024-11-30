@@ -1,0 +1,169 @@
+<!-- Include Font Awesome for other icons (optional) -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+/>
+
+<nav class="fixed-nav">
+  <ul class="nav-list">
+    <!-- Home Button (Left) -->
+    <li>
+      <button class="btn" onclick="window.location.href='/'">
+        <i class="fa fa-undo"></i> Home
+      </button>
+    </li>
+    <!-- Theme Toggle Button (Right) -->
+    <li>
+      <button class="btn theme-toggle" id="theme-toggle-btn">
+        <img id="theme-icon" src="https://img.icons8.com/ios-filled/50/000000/sun.png" alt="Sun Icon" style="width: 20px; height: 20px;" /> <!-- Default to Sun Icon -->
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<style>
+  /* Basic reset for list and navbar */
+  .nav-list {
+    display: flex;
+    justify-content: space-between; /* Align buttons to left and right */
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  .nav-list li {
+    margin-right: 1rem; /* Space between buttons */
+  }
+
+  /* Style for the buttons */
+  .btn {
+    background-color: DodgerBlue; /* Button background color */
+    border: none; /* Remove borders */
+    color: white; /* Text color */
+    padding: .5rem 2rem; /* Padding around the text */
+    font-size: 16px; /* Font size */
+    cursor: pointer; /* Mouse pointer on hover */
+    display: flex;
+    align-items: center; /* Align icon and text */
+    justify-content: center;
+    border-radius: 0.375rem; /* Rounded corners */
+    transition: background-color 0.3s ease; /* Smooth background color transition */
+  }
+
+  /* Hover effect for buttons */
+  .btn:hover {
+    background-color: RoyalBlue; /* Darker background on hover */
+  }
+
+  /* Navbar Styles */
+  .fixed-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between; /* Align left and right buttons */
+    background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+    padding: 0.5rem 1rem;
+  }
+
+  /* Dark mode navbar */
+  .fixed-nav.dark-theme {
+    background-color: rgba(0, 0, 0, 0.25);
+  }
+
+  /* Theme Toggle Button Specific Styles */
+  .theme-toggle {
+    background-color: transparent;
+    border: none;
+    color: inherit; /* Inherit text color */
+    padding: 1rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+  }
+
+  .theme-toggle:hover {
+    background-color: transparent;
+  }
+
+  /* Body styles for light and dark themes */
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Light theme */
+  body.light-theme {
+    background-color: #ffffff;
+    color: #333;
+  }
+
+  /* Dark theme */
+  body.dark-theme {
+    background-color: #121212;
+    color: #ffffff;
+  }
+
+  /* Additional content styling */
+  .content {
+    padding-top: 3rem; /* Adjust to account for fixed navbar */
+    text-align: center;
+    padding: 2rem;
+  }
+</style>
+
+<script>
+  // Theme toggle functionality
+  document.querySelector('.theme-toggle').addEventListener('click', function() {
+    const body = document.body;
+    const nav = document.querySelector('.fixed-nav');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Toggle the theme on body and navbar
+    body.classList.toggle('dark-theme');
+    nav.classList.toggle('dark-theme');
+    
+    // Change the icon depending on the theme
+    if (body.classList.contains('dark-theme')) {
+      themeIcon.src = "https://img.icons8.com/ios-filled/50/000000/moon.png"; // Moon icon for dark mode
+      localStorage.setItem('theme', 'dark');
+    } else {
+      themeIcon.src = "https://img.icons8.com/ios-filled/50/000000/sun.png"; // Sun icon for light mode
+      localStorage.setItem('theme', 'light');
+    }
+  });
+
+  // On page load, set the theme based on localStorage or system preference
+  (function() {
+    const savedTheme = localStorage.getItem('theme');
+    const body = document.body;
+    const nav = document.querySelector('.fixed-nav');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    if (savedTheme) {
+      body.classList.add(savedTheme + '-theme');
+      nav.classList.add(savedTheme + '-theme');
+      if (savedTheme === 'dark') {
+        themeIcon.src = "https://img.icons8.com/ios-filled/50/000000/moon.png"; // Moon icon for dark mode
+      } else {
+        themeIcon.src = "https://img.icons8.com/ios-filled/50/000000/sun.png"; // Sun icon for light mode
+      }
+    } else {
+      // Default to system preference
+      const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (isDarkMode) {
+        body.classList.add('dark-theme');
+        nav.classList.add('dark-theme');
+        themeIcon.src = "https://img.icons8.com/ios-filled/50/000000/moon.png"; // Moon icon for dark mode
+      } else {
+        body.classList.add('light-theme');
+        nav.classList.add('light-theme');
+        themeIcon.src = "https://img.icons8.com/ios-filled/50/000000/sun.png"; // Sun icon for light mode
+      }
+    }
+  })();
+</script>

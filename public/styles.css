@@ -1,0 +1,279 @@
+/* Base Button Styles */
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    /* Rounded corners */
+    font-size: 1rem;
+    font-weight: 600;
+    /* Make the text bolder */
+    padding: 0.75rem 1.5rem;
+    /* Larger padding for better touch area */
+    transition: all 0.3s ease;
+    /* Smooth transition for hover effects */
+    cursor: pointer;
+    outline: none;
+    text-decoration: none;
+    border: 1px solid transparent;
+    /* Ensures border doesn't show until active */
+}
+
+/* Light Mode Button */
+.button.light {
+    background-color: #3b82f6;
+    /* Primary blue color */
+    color: #ffffff;
+    /* White text */
+    border-color: #3b82f6;
+    /* Matching border */
+}
+
+/* Dark Mode Button */
+.button.dark {
+    background-color: #4b5563;
+    /* Dark gray background */
+    color: #f9fafb;
+    /* Light text */
+    border-color: #4b5563;
+    /* Matching border */
+}
+
+/* Button Hover Effects */
+.button:hover,
+.button:focus {
+    background-color: #2563eb;
+    /* Darker blue for light mode */
+    border-color: #2563eb;
+    /* Border turns darker */
+    color: #ffffff;
+    /* Keep the text color white */
+    transform: translateY(-2px);
+    /* Slight lift effect */
+}
+
+/* Dark Mode Hover Effect */
+.button.dark:hover,
+.button.dark:focus {
+    background-color: #6b7280;
+    /* Lighter gray for dark mode */
+    border-color: #6b7280;
+    /* Matching border */
+    color: #f9fafb;
+    /* Keep light text in dark mode */
+    transform: translateY(-2px);
+    /* Slight lift effect */
+}
+
+/* Active Button (pressed state) */
+.button:active {
+    transform: translateY(1px);
+    /* Button presses down slightly */
+}
+
+/* Disabled Button Styles */
+.button:disabled {
+    background-color: #b1d1d1;
+    /* Light gray background */
+    color: #9ca3af;
+    /* Muted text color */
+    border: 1px solid #d1d5db;
+    /* Disabled border */
+    cursor: not-allowed;
+    opacity: 0.6;
+    /* Faded effect */
+}
+
+/* Accessibility Enhancements */
+.button:focus {
+    box-shadow: 0 0 0 4px rgba(66, 153, 225, 0.6);
+    /* Outline for better accessibility */
+}
+
+/* Adjustments for Different Button Sizes */
+.button.small {
+    font-size: 0.875rem;
+    /* Smaller font */
+    padding: 0.5rem 1rem;
+    /* Smaller padding */
+}
+
+.button.large {
+    font-size: 1.125rem;
+    /* Larger font */
+    padding: 1rem 2rem;
+    /* Larger padding */
+}
+
+/* General Reset for HTML and Body */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #ffffff;
+    /* Light theme default */
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Dark theme styles */
+body.dark-theme {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+/* Navbar Styles */
+.fixed-nav {
+    position: fixed;
+    top: 0;
+    /* Fix the navbar at the top */
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 3rem;
+    padding: 0.5rem 1rem;
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.25);
+    /* Light theme */
+}
+
+/* Dark mode navbar */
+.fixed-nav.dark-theme {
+    background-color: rgba(0, 0, 0, 0.8);
+    /* Dark theme navbar */
+}
+
+/* Navbar Logo */
+.fixed-nav .logo {
+    width: 170px;
+    height: 100px;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+/* Navbar Buttons */
+.fixed-nav .button,
+.fixed-nav .Back {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Ensure content below the fixed navbar doesn't overlap */
+body {
+    padding-top: 3rem;
+    /* Adjust according to navbar height */
+}
+
+/* Container Style */
+.container {
+    flex: 1;
+    min-width: 40rem;
+    max-width: 64rem;
+    min-height: 50vh;
+    margin: 0 auto;
+    padding-top: 10%;
+    /* Space for content */
+    text-align: center;
+}
+
+/* Heading and Subheading */
+.heading {
+    font-size: 2.25rem;
+    font-weight: 500;
+    display: flex;
+    justify-content: center;
+}
+
+.subheading {
+    text-align: center;
+    color: #6b7280;
+    font-size: 1rem;
+    padding: 0 1.5rem;
+}
+
+/* Highlight Class */
+.highlight {
+    font-weight: 500;
+    color: #3b82f6;
+}
+
+/* Upload Box Styles */
+.upload-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #cbd5e1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    background-color: #ffffff;
+    height: 18rem;
+    border-radius: 1.5rem;
+}
+
+.upload-box input {
+    display: none;
+}
+
+.upload-box .icon {
+    font-size: 3rem;
+    color: #9ca3af;
+}
+
+.upload-box h3 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Preview Container */
+#preview-container {
+    margin-top: 20px;
+}
+
+#image-preview {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Dark theme styles for upload box */
+body.dark-theme .upload-box {
+    background-color: #1e1e1e;
+    border-color: #404040;
+}
+
+.error-container {
+    display: flex;
+    justify-content: center;
+    /* Center horizontally */
+    align-items: center;
+    /* Center vertically */
+    position: fixed;
+    /* Position relative to the viewport */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Semi-transparent overlay */
+    z-index: 1000;
+    /* Ensure it's above other content */
+}
+
+.error-message {
+    background-color: #fff;
+    padding: 20px;
+    text-align: center;
+    font-size: 18px;
+    border-radius: 10px;
+    width: 75%;
+    /* Set the width to 75% of the screen */
+    max-width: 600px;
+    /* Optional: Limit the maximum width */
+}
