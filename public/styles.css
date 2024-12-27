@@ -1,3 +1,20 @@
+/* Ensure the HTML and body elements take up the full height of the viewport */
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+/* Use Flexbox for the body to handle the layout */
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Main content should take up all the available space */
+.main-content {
+    flex: 1;
+}
 /* Base Button Styles */
 .button {
     display: inline-flex;
@@ -276,4 +293,26 @@ body.dark-theme .upload-box {
     /* Set the width to 75% of the screen */
     max-width: 600px;
     /* Optional: Limit the maximum width */
+}
+#theme-toggle-btn {
+    border: 2px solid #3b82f6;
+    /* Blue border */
+    border-radius: 50%;
+    /* Circular border */
+    padding: 10px;
+    /* Adjust padding as needed */
+}
+
+/* Footer styling */
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: #f1f1f1;
+}
+
+#upload-box {
+    margin: 25px;
+    padding: 2px;
+    border: 2px solid #3b82f6;
+    border-radius: 20%;
 }
