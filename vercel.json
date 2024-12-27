@@ -9,7 +9,11 @@
   "routes": [
     {
       "src": "/(.*)",
+<<<<<<< HEAD
       "dest": "server.js"
+=======
+      "dest": "/"
+>>>>>>> origin/master
     }
   ]
 }

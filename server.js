@@ -9,9 +9,8 @@ const fs = require("fs");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Add this near the top of your server.js
 app.set("view engine", "ejs");
-
+app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Set the path for ffmpeg
