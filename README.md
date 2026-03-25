@@ -1,95 +1,79 @@
 # TypeConverter
 
-A web application to convert files from one format to another.
+A fast, privacy-focused web application to convert files from one format to another - entirely in your browser with no server uploads.
 
-## Project Structure
+## ✨ Features
+
+- **Browser-Based Processing** - All conversions happen locally in your browser using WebAssembly (FFmpeg for audio, Sharp for images)
+- **No Uploads** - Your files never leave your device
+- **No Tracking** - Cookie-free, no analytics, no data collection
+- **Ad-Free** - Clean, minimal interface
+- **Batch Processing** - Convert multiple files at once
+- **Format Preview** - Preview files before and after conversion
+
+## Supported Formats
+
+### Images
+JPEG, PNG, WEBP, GIF, BMP, TIFF, ICO, SVG, RAW, TGA
+
+### Audio
+MP3, WAV, OGG, FLAC
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start the server
+npm start
+```
+
+Visit `http://localhost:3000` to use the converter.
+
+## 📁 Project Structure
 
 ```
+TypeConverter/
 ├── api/
-│   └── index.ts
+│   └── index.ts           # API endpoints
 ├── public/
-│   ├── styles.css
-│   └── uploads/
+│   ├── styles.css         # Frontend styles
+│   └── uploads/           # Temporary file storage
 ├── views/
 │   ├── pages/
-│   │   ├── index.ejs
-│   │   └── result.ejs
+│   │   ├── index.ejs      # Main converter page
+│   │   └── result.ejs     # Results page
 │   └── partials/
 │       ├── footer.ejs
 │       ├── header.ejs
 │       └── navbar.ejs
-├── server.js
+├── server.js              # Express server
+├── main.js                # Client-side logic
 ├── package.json
-└── package-lock.json
+└── vercel.json            # Vercel deployment config
 ```
 
-## Prerequisites
+## 🔒 Privacy & Security
 
-- Node.js (v14 or higher)
-- npm
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/KruthikKoundinyas/Typeconverter
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the server:
-```bash
-npm start
-```
-
-The application will be available at `http://localhost:3000`
-
-## Features
-
-- EJS templating
-- Static file serving
-- File upload functionality
-- Cookie-free: No tracking or session data stored
-- Ad-free: Clean interface without advertisements
-- Privacy-focused: Files are automatically deleted after download
-- Runs locally: All processing happens on your machine
-- Supports multiple file formats:
-  - Images: JPEG, PNG, WEBP, GIF, BMP, TIFF, ICO, SVG
-  - Audio: MP3, WAV, OGG, FLAC
-
-## Supported Conversions
-
-### Image to Image
-- JPEG, PNG, WEBP
-
-### Audio to Audio
-- MP3, WAV, OGG
-
-## Security & Privacy
-
-- No data collection
-- No cookies or tracking
-- Temporary file storage only
-- Automatic file cleanup (files older than 1 hour)
-- All processing done locally
+- Files are processed locally in the browser
+- Temporary files are automatically cleaned up (files older than 1 hour)
 - Path traversal protection on file downloads
+- No cookies or session data stored
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- Node.js
-- Express.js
-- Multer for file handling
-- FFmpeg for audio processing
-- Sharp for image processing
-- EJS for templating
-
-## Author
-
-Koundinyas
+- **Node.js** - Backend runtime
+- **Express.js** - Web framework
+- **EJS** - Template engine
+- **Sharp** - Image processing (server-side)
+- **FFmpeg** - Audio/video processing (browser-side via WebAssembly)
+- **Multer** - File upload handling
 
 ## License
 
 ISC
+
+## 👤 Author
+
+Koundinyas

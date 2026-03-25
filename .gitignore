@@ -28,3 +28,6 @@ build/
 # Temporary files
 *.tmp
 *.temp
+
+# Project planning
+plan.txt
