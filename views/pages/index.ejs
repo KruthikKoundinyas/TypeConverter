@@ -3,161 +3,582 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500&family=Playfair+Display:wght@480;500&display=swap" rel="stylesheet">
     <title>File Converter</title>
-    <script>
-    (function() {
-  function setTheme() {
-    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const body = document.body;
-    const nav = document.querySelector('.fixed-nav');
-    
-    if (isDarkMode) {
-      body.classList.add('dark-theme');
-      nav.classList.add('dark-theme');
-    } else {
-      body.classList.remove('dark-theme');
-      nav.classList.remove('dark-theme');
-    }
-  }
-
-  // Set theme on load
-  setTheme();
-
-  // Listen for system theme changes
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
-})();
-
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/umd/ffmpeg.js"></script>
+  </head>
   </head>
   <body>
     <%- include('../partials/navbar') %> 
     <%- include('../partials/header') %>
-    <div class="container">
-      <form
-        action="/convert"
-        method="POST"
-        enctype="multipart/form-data"
-        style="display: flex; align-items: flex-start"
-      >
-        <div style="flex: 1; margin-right: 20px">
-          <div role="presentation" tabindex="0" class="upload-box">
-            <label for="file-upload">
-              <input
-                id="file-upload"
-                accept="image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.ico,.tif,.tiff,.raw,.tga,audio/*,video/*"
-                multiple
-                name="file"
-                type="file"
-                required
-                onchange="previewFiles(event)"
-              />
-              <div class="space-y-4 text-foreground" id="upload_box">
-                <div class="flex justify-center text-6xl">
-                  <svg
-                    stroke="currentColor"
-                    fill="none"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    height="1em"
-                    width="1em"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <polyline points="16 16 12 12 8 16"></polyline>
-                    <line x1="12" y1="12" x2="12" y2="21"></line>
-                    <path
-                      d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"
-                    ></path>
-                  </svg>
-                </div>
-                <h3 class="text-2xl font-medium text-center">
-                  Click, or drop your files here
-                </h3>
+    
+    <div class="main-content">
+      <div class="container">
+        <div class="converter-card">
+          <form
+            action="#"
+            method="POST"
+            enctype="multipart/form-data"
+            class="converter-form"
+          >
+            <div class="upload-section">
+              <div role="presentation" tabindex="0" class="upload-box">
+                <label for="file-upload" class="upload-label">
+                  <input
+                    id="file-upload"
+                    accept="image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.ico,.tif,.tiff,.raw,.tga,audio/*,video/*"
+                    multiple
+                    name="file"
+                    type="file"
+                    required
+                    onchange="previewFiles(event)"
+                    class="file-input"
+                  />
+                  <div class="upload-content" id="upload_box">
+                    <div class="upload-icon">
+                      <svg
+                        stroke="currentColor"
+                        fill="none"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <polyline points="16 16 12 12 8 16"></polyline>
+                        <line x1="12" y1="12" x2="12" y2="21"></line>
+                        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                      </svg>
+                    </div>
+                    <h3 class="upload-title">
+                      Click, or drop your files here
+                    </h3>
+                    <p class="upload-hint">
+                      Supports: JPEG, PNG, WEBP, GIF, MP3, WAV, OGG
+                    </p>
+                  </div>
+                </label>
               </div>
-            </label>
-          </div>
 
-          <!-- Dropdown for format selection -->
-          <label for="format-select">Select Output Format:</label>
-          <select id="format-select" name="format" required>
-            <option value="">--Choose a format--</option>
-            <optgroup label="Images">
-              <option value="jpeg">JPEG</option>
-              <option value="png">PNG</option>
-              <option value="webp">WEBP</option>
-            </optgroup>
-            <optgroup label="Audio">
-              <option value="mp3">MP3</option>
-              <option value="wav">WAV</option>
-              <option value="ogg">OGG</option>
-            </optgroup>
-          </select>
+              <!-- Format Selection -->
+              <div class="format-selection">
+                <label for="format-select">Select Output Format:</label>
+                <select id="format-select" name="format" required>
+                  <option value="">--Choose a format--</option>
+                  <optgroup label="Images" class="image-formats">
+                    <option value="jpeg">JPEG</option>
+                    <option value="png">PNG</option>
+                    <option value="webp">WEBP</option>
+                  </optgroup>
+                  <optgroup label="Audio" class="audio-formats">
+                    <option value="mp3">MP3</option>
+                    <option value="wav">WAV</option>
+                    <option value="ogg">OGG</option>
+                  </optgroup>
+                </select>
+              </div>
 
-          <!-- Submit button -->
-          <button type="submit">Convert Files</button>
-        </div>
+              <!-- Submit Button -->
+              <button type="submit" id="convert-btn" class="convert-btn">
+                <span>Convert Files</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              </button>
+              
+              <!-- Loading Spinner -->
+              <div id="loading-spinner" class="loading-spinner" style="display: none;">
+                <div class="spinner"></div>
+                <p>Converting your files... This may take a moment.</p>
+              </div>
+            </div>
 
         <!-- Preview Section -->
-        <div id="preview-container" style="flex: 1">
-          <!-- Image Preview -->
+        <div id="preview-container" class="preview-section">
+          <div id="preview-placeholder" class="preview-placeholder">
+            <p>No file selected</p>
+          </div>
+          <!-- Multiple Files Preview Container -->
+          <div id="multi-file-previews" class="multi-file-previews" style="display: none;">
+            <!-- File previews will be added here dynamically -->
+          </div>
+          <!-- Single Image Preview (for single file) -->
           <img
             id="image-preview"
             alt="Image Preview"
-            style="
-              max-width: 300px;
-              display: none;
-              border: 1px solid #ccc;
-              border-radius: 5px;
-            "
+            class="preview-image"
+            style="display: none;"
           />
 
-          <!-- Audio Preview -->
+          <!-- Single Audio Preview (for single file) -->
           <audio
             id="audio-preview"
             controls
-            style="display: none; margin-top: 10px"
+            class="preview-audio"
+            style="display: none;"
           >
             Your browser does not support the audio element.
           </audio>
+        </div>
+
+        <!-- Multi-File Format Selection Popup -->
+        <div id="multi-file-modal" class="modal-overlay" style="display: none;">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>Select Output Formats</h3>
+              <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="modal-info">Choose output format for each file or use the same format for all.</p>
+              
+              <div class="same-format-option">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="use-same-format" checked onchange="toggleSameFormat()">
+                  <span>Use same format for all files</span>
+                </label>
+                <select id="global-format" class="global-format-select">
+                  <option value="">--Choose format--</option>
+                  <optgroup label="Images">
+                    <option value="jpeg">JPEG</option>
+                    <option value="png">PNG</option>
+                    <option value="webp">WEBP</option>
+                  </optgroup>
+                  <optgroup label="Audio">
+                    <option value="mp3">MP3</option>
+                    <option value="wav">WAV</option>
+                    <option value="ogg">OGG</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div id="individual-formats" class="individual-formats" style="display: none;">
+                <!-- File format rows will be added here dynamically -->
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+              <button type="button" class="btn-primary" onclick="confirmConversion()">Convert All</button>
+            </div>
+          </div>
         </div>
       </form>
 
       <!-- Function to preview files -->
       <script>
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
         function previewFiles(event) {
           const files = event.target.files;
           const imagePreview = document.getElementById("image-preview");
           const audioPreview = document.getElementById("audio-preview");
+          const previewPlaceholder = document.getElementById("preview-placeholder");
+          const multiFilePreviews = document.getElementById("multi-file-previews");
+          const formatSelect = document.getElementById('format-select');
+          const imageFormats = formatSelect.querySelectorAll('.image-formats option');
+          const audioFormats = formatSelect.querySelectorAll('.audio-formats option');
 
           // Reset previews
           imagePreview.style.display = "none";
           audioPreview.style.display = "none";
+          multiFilePreviews.innerHTML = '';
+          
+          if (files.length === 0) {
+            previewPlaceholder.style.display = "flex";
+            multiFilePreviews.style.display = "none";
+            // Reset format dropdown
+            formatSelect.value = "";
+            imageFormats.forEach(opt => opt.disabled = false);
+            audioFormats.forEach(opt => opt.disabled = false);
+            return;
+          }
 
-          // Loop through selected files
+          // Show placeholder until we have a preview
+          previewPlaceholder.style.display = "none";
+          
+          // Reset format dropdown
+          formatSelect.value = "";
+          imageFormats.forEach(opt => opt.disabled = false);
+          audioFormats.forEach(opt => opt.disabled = false);
+
+          // First pass: determine what file types are in the selection
+          let hasImages = false;
+          let hasAudio = false;
           for (let i = 0; i < files.length; i++) {
             const file = files[i];
+            if (file.type.startsWith("image/")) {
+              hasImages = true;
+            } else if (file.type.startsWith("audio/")) {
+              hasAudio = true;
+            }
+          }
 
+          // Enable/disable formats based on file types present
+          // If mixed types, allow all formats; otherwise restrict to the type present
+          if (hasImages && !hasAudio) {
+            audioFormats.forEach(opt => opt.disabled = true);
+          } else if (hasAudio && !hasImages) {
+            imageFormats.forEach(opt => opt.disabled = true);
+          }
+          // If both or neither, keep all formats enabled
+
+          // Display multiple file previews
+          if (files.length > 1) {
+            multiFilePreviews.style.display = "flex";
+            imagePreview.style.display = "none";
+            audioPreview.style.display = "none";
+            
+            for (let i = 0; i < files.length; i++) {
+              const file = files[i];
+              const previewItem = document.createElement('div');
+              previewItem.className = 'file-preview-item';
+              
+              if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                  previewItem.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview">
+                    <div class="file-preview-info">
+                      <div class="file-preview-name">${file.name}</div>
+                      <div class="file-preview-size">${formatFileSize(file.size)}</div>
+                    </div>
+                  `;
+                };
+                reader.readAsDataURL(file);
+              } else if (file.type.startsWith('audio/')) {
+                const url = URL.createObjectURL(file);
+                previewItem.innerHTML = `
+                  <audio controls src="${url}"></audio>
+                  <div class="file-preview-info">
+                    <div class="file-preview-name">${file.name}</div>
+                    <div class="file-preview-size">${formatFileSize(file.size)}</div>
+                  </div>
+                `;
+              }
+              
+              multiFilePreviews.appendChild(previewItem);
+            }
+          } else {
+            // Single file - use original preview behavior
+            multiFilePreviews.style.display = "none";
+            
+            const file = files[0];
             // Check if the file is an image
             if (file.type.startsWith("image/")) {
               const reader = new FileReader();
               reader.onload = function (e) {
                 imagePreview.src = e.target.result;
                 imagePreview.style.display = "block"; // Show image preview
+                previewPlaceholder.style.display = "none"; // Hide placeholder
               };
               reader.readAsDataURL(file);
             }
-
             // Check if the file is audio
             else if (file.type.startsWith("audio/")) {
               const url = URL.createObjectURL(file);
               audioPreview.src = url;
               audioPreview.style.display = "block"; // Show audio preview
+              previewPlaceholder.style.display = "none"; // Hide placeholder
             }
           }
         }
+        
+        // Show loading spinner on form submit
+        document.querySelector('form').addEventListener('submit', function(e) {
+          const fileInput = document.getElementById('file-upload');
+          const files = fileInput.files;
+          const formatSelect = document.getElementById('format-select');
+          
+          // If no files, let the form submit normally (will show validation error)
+          if (!files || files.length === 0) {
+            return;
+          }
+          
+          // If multiple files, show modal instead
+          if (files.length > 1) {
+            e.preventDefault();
+            showMultiFileModal(files);
+            return;
+          }
+          
+          // Single file - perform client-side conversion
+          e.preventDefault();
+          const outputFormat = formatSelect.value;
+          if (!outputFormat) {
+            alert('Please select an output format');
+            return;
+          }
+          
+          const convertBtn = document.getElementById('convert-btn');
+          const spinner = document.getElementById('loading-spinner');
+          
+          convertBtn.disabled = true;
+          convertBtn.innerHTML = '<span>Converting...</span>';
+          spinner.style.display = 'block';
+          
+          // Perform client-side conversion for single file
+          performClientSideConversion(files, [outputFormat]);
+        });
+
+        // Multi-file modal functions
+        let currentFiles = [];
+
+        function showMultiFileModal(files) {
+          currentFiles = Array.from(files);
+          const modal = document.getElementById('multi-file-modal');
+          const globalFormat = document.getElementById('global-format');
+          const useSameFormat = document.getElementById('use-same-format');
+          const individualFormats = document.getElementById('individual-formats');
+          
+          // Determine file types and enable appropriate formats
+          let hasImages = false;
+          let hasAudio = false;
+          currentFiles.forEach(file => {
+            if (file.type.startsWith('image/')) hasImages = true;
+            else if (file.type.startsWith('audio/')) hasAudio = true;
+          });
+          
+          // Enable/disable format options based on file types
+          const imageOpts = globalFormat.querySelectorAll('option[value="jpeg"], option[value="png"], option[value="webp"]');
+          const audioOpts = globalFormat.querySelectorAll('option[value="mp3"], option[value="wav"], option[value="ogg"]');
+          
+          if (hasImages && !hasAudio) {
+            audioOpts.forEach(opt => opt.disabled = true);
+          } else if (hasAudio && !hasImages) {
+            imageOpts.forEach(opt => opt.disabled = true);
+          } else {
+            imageOpts.forEach(opt => opt.disabled = false);
+            audioOpts.forEach(opt => opt.disabled = false);
+          }
+          
+          // Reset state
+          useSameFormat.checked = true;
+          globalFormat.value = "";
+          globalFormat.style.display = "block";
+          individualFormats.style.display = "none";
+          individualFormats.innerHTML = "";
+          
+          modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+          document.getElementById('multi-file-modal').style.display = 'none';
+        }
+
+        function toggleSameFormat() {
+          const useSameFormat = document.getElementById('use-same-format');
+          const globalFormat = document.getElementById('global-format');
+          const individualFormats = document.getElementById('individual-formats');
+          
+          if (useSameFormat.checked) {
+            globalFormat.style.display = "block";
+            individualFormats.style.display = "none";
+          } else {
+            globalFormat.style.display = "none";
+            individualFormats.style.display = "block";
+            renderIndividualFormats();
+          }
+        }
+
+        function renderIndividualFormats() {
+          const container = document.getElementById('individual-formats');
+          const globalFormat = document.getElementById('global-format');
+          container.innerHTML = "";
+          
+          currentFiles.forEach((file, index) => {
+            const row = document.createElement('div');
+            row.className = 'file-format-row';
+            row.innerHTML = `
+              <span class="file-name">${file.name}</span>
+              <select class="file-format-select" data-index="${index}">
+                ${globalFormat.innerHTML}
+              </select>
+            `;
+            container.appendChild(row);
+          });
+        }
+
+        function confirmConversion() {
+          const useSameFormat = document.getElementById('use-same-format').checked;
+          const globalFormat = document.getElementById('global-format').value;
+          
+          if (useSameFormat && !globalFormat) {
+            alert('Please select an output format');
+            return;
+          }
+          
+          // Get format selections
+          let formatSelections = [];
+          if (useSameFormat) {
+            currentFiles.forEach(() => formatSelections.push(globalFormat));
+          } else {
+            document.querySelectorAll('.file-format-select').forEach(select => {
+              formatSelections.push(select.value);
+            });
+            
+            // Validate all formats are selected
+            const allSelected = formatSelections.every(f => f);
+            if (!allSelected) {
+              alert('Please select a format for each file');
+              return;
+            }
+          }
+          
+          closeModal();
+          
+          // Show loading and perform client-side conversion
+          const convertBtn = document.getElementById('convert-btn');
+          const spinner = document.getElementById('loading-spinner');
+          convertBtn.disabled = true;
+          convertBtn.innerHTML = '<span>Converting...</span>';
+          spinner.style.display = 'block';
+          
+          // Perform client-side conversion
+          performClientSideConversion(currentFiles, formatSelections);
+        }
+
+        // Client-side conversion using Canvas API for images and FFmpeg for audio
+        async function performClientSideConversion(files, formats) {
+          try {
+            let ffmpeg = null;
+            let ffmpegLoaded = false;
+            
+            const convertedBlobs = [];
+            
+            for (let i = 0; i < files.length; i++) {
+              const file = files[i];
+              const outputFormat = formats[i];
+              
+              // Update progress
+              const convertBtn = document.getElementById('convert-btn');
+              convertBtn.innerHTML = `<span>Converting ${i + 1}/${files.length}...</span>`;
+              
+              if (file.type.startsWith('image/')) {
+                // Convert image using Canvas API
+                const blob = await convertImageClientSide(file, outputFormat);
+                convertedBlobs.push({ blob, name: `converted-${i}.${outputFormat}` });
+              } else if (file.type.startsWith('audio/')) {
+                // Convert audio using FFmpeg
+                if (!ffmpegLoaded) {
+                  // FFmpeg is loaded from the global ffmpeg variable
+                  const { FFmpeg } = window.FFmpeg;
+                  const { fetchFile } = window.FFmpegUtil;
+                  ffmpeg = new FFmpeg();
+                  
+                  ffmpeg.on('log', ({ message }) => console.log('[FFmpeg]', message));
+                  
+                  await ffmpeg.load({
+                    coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+                    wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+                  });
+                  ffmpegLoaded = true;
+                }
+                const blob = await convertAudioClientSide(ffmpeg, file, outputFormat);
+                convertedBlobs.push({ blob, name: `converted-${i}.${outputFormat}` });
+              }
+            }
+            
+            // Create ZIP if multiple files, otherwise download single file
+            if (convertedBlobs.length > 1) {
+              const zip = new JSZip();
+              convertedBlobs.forEach(({ blob, name }) => {
+                zip.file(name, blob);
+              });
+              const zipBlob = await zip.generateAsync({ type: 'blob' });
+              downloadBlob(zipBlob, 'converted-files.zip');
+            } else if (convertedBlobs.length === 1) {
+              downloadBlob(convertedBlobs[0].blob, convertedBlobs[0].name);
+            }
+            
+            // Reset UI
+            document.getElementById('convert-btn').disabled = false;
+            document.getElementById('convert-btn').innerHTML = '<span>Convert Files</span>';
+            document.getElementById('loading-spinner').style.display = 'none';
+            
+            // Show success message
+            alert('Conversion complete! Your files have been downloaded.');
+            
+          } catch (error) {
+            console.error('Conversion error:', error);
+            document.getElementById('convert-btn').disabled = false;
+            document.getElementById('convert-btn').innerHTML = '<span>Convert Files</span>';
+            document.getElementById('loading-spinner').style.display = 'none';
+            alert('Conversion failed: ' + error.message);
+          }
+        }
+
+        async function convertImageClientSide(file, outputFormat) {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              
+              const mimeType = `image/${outputFormat}`;
+              canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error('Failed to convert image'));
+              }, mimeType, 0.9);
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = URL.createObjectURL(file);
+          });
+        }
+
+        async function convertAudioClientSide(ffmpeg, file, outputFormat) {
+          // Create fetchFile function manually
+          const fetchFile = async (fileOrData) => {
+            if (fileOrData instanceof File) {
+              const arrayBuffer = await fileOrData.arrayBuffer();
+              return new Uint8Array(arrayBuffer);
+            }
+            return fileOrData;
+          };
+          
+          const inputData = await fetchFile(file);
+          const inputExt = file.name.split('.').pop();
+          const inputName = `input.${inputExt}`;
+          const outputName = `output.${outputFormat}`;
+          
+          await ffmpeg.writeFile(inputName, inputData);
+          
+          const codec = outputFormat === 'mp3' ? 'libmp3lame' : outputFormat === 'ogg' ? 'libvorbis' : 'pcm_s16le';
+          await ffmpeg.exec(['-i', inputName, '-codec:a', codec, outputName]);
+          
+          const outputData = await ffmpeg.readFile(outputName);
+          
+          // Clean up
+          await ffmpeg.deleteFile(inputName);
+          await ffmpeg.deleteFile(outputName);
+          
+          const mimeTypes = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg' };
+          return new Blob([outputData.buffer], { type: mimeTypes[outputFormat] });
+        }
+
+        function downloadBlob(blob, filename) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
       </script>
+    </div>
+    </div>
     </div>
     <%- include('../partials/footer') %>
   </body>

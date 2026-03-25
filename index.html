@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Converter</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- FFmpeg WASM for audio conversion -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+  </head>
+  <body>
+    <!-- Animated Background -->
+    <div class="bg-gradient"></div>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="container header-content">
+        <div class="header-text">
+          <h1 class="header-title">File Converter</h1>
+          <p class="header-subtitle">
+            Convert your files to any format - completely client-side
+          </p>
+        </div>
+        <button
+          id="theme-toggle"
+          class="theme-toggle"
+          aria-label="Toggle dark mode"
+        >
+          <svg
+            class="icon-sun"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg
+            class="icon-moon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="container">
+        <!-- Upload Section -->
+        <div class="converter-card">
+          <div class="upload-section">
+            <!-- Drag and Drop Area -->
+            <div id="drop-zone" class="drop-zone">
+              <input
+                type="file"
+                id="file-input"
+                class="file-input-hidden"
+                accept="image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.ico,.tif,.tiff,.raw,.tga,audio/*,video/*"
+                multiple
+              />
+              <label for="file-input" class="drop-zone-label">
+                <div class="upload-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="64"
+                    height="64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="16 16 12 12 8 16"></polyline>
+                    <line x1="12" y1="12" x2="12" y2="21"></line>
+                    <path
+                      d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"
+                    ></path>
+                  </svg>
+                </div>
+                <h3 class="upload-title">Drag & drop files here</h3>
+                <p class="upload-hint">or click to browse</p>
+                <p class="upload-formats">
+                  Supports: JPEG, PNG, WEBP, GIF, MP3, WAV, OGG
+                </p>
+              </label>
+            </div>
+
+            <!-- Selected Files Display -->
+            <div id="selected-files" class="selected-files"></div>
+
+            <!-- Format Selection -->
+            <div class="format-selection">
+              <label for="format-select">Select Output Format:</label>
+              <select id="format-select">
+                <option value="">--Choose a format--</option>
+                <optgroup label="Images" class="image-formats">
+                  <option value="jpeg">JPEG</option>
+                  <option value="png">PNG</option>
+                  <option value="webp">WEBP</option>
+                  <option value="gif">GIF</option>
+                </optgroup>
+                <optgroup label="Audio" class="audio-formats">
+                  <option value="mp3">MP3</option>
+                  <option value="wav">WAV</option>
+                  <option value="ogg">OGG</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Quality/Compression Settings -->
+            <div
+              class="compression-settings"
+              id="compression-settings"
+              class="hidden"
+            >
+              <div
+                class="quality-slider"
+                id="image-quality-container"
+                class="hidden"
+              >
+                <label for="quality-slider"
+                  >Quality: <span id="quality-value">80</span>%</label
+                >
+                <input
+                  type="range"
+                  id="quality-slider"
+                  min="10"
+                  max="100"
+                  value="80"
+                  class="slider"
+                />
+                <p class="quality-hint">Lower quality = smaller file size</p>
+              </div>
+              <div
+                class="bitrate-select"
+                id="audio-bitrate-container"
+                class="hidden"
+              >
+                <label for="bitrate-select">Audio Bitrate:</label>
+                <select id="bitrate-select">
+                  <option value="64000">64 kbps (Smallest)</option>
+                  <option value="128000" selected>
+                    128 kbps (Recommended)
+                  </option>
+                  <option value="192000">192 kbps</option>
+                  <option value="320000">320 kbps (Best Quality)</option>
+                </select>
+                <p class="bitrate-hint">
+                  Higher bitrate = better quality, larger file
+                </p>
+              </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loading-spinner" class="loading-spinner hidden">
+              <div class="spinner"></div>
+              <p class="spinner-text">Converting...</p>
+              <p id="progress-text" class="progress-text"></p>
+            </div>
+
+            <!-- Convert Button -->
+            <button id="convert-btn" class="convert-btn" disabled>
+              <span class="btn-text">Convert Files</span>
+              <svg
+                class="btn-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="preview-section" class="preview-section">
+          <h2 class="preview-title">Preview</h2>
+          <div class="preview-container">
+            <!-- Image Preview -->
+            <img
+              id="image-preview"
+              class="preview-image hidden"
+              alt="Image Preview"
+            />
+            <!-- Audio Preview -->
+            <audio id="audio-preview" class="preview-audio hidden" controls>
+              Your browser does not support the audio element.
+            </audio>
+            <!-- Video Preview -->
+            <video id="video-preview" class="preview-video hidden" controls>
+              Your browser does not support the video element.
+            </video>
+            <div id="preview-placeholder" class="preview-placeholder">
+              <p>No file selected</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="result-section hidden">
+          <h2 class="result-title">Conversion Result</h2>
+          <div id="result-container" class="result-container"></div>
+          <button id="download-btn" class="download-btn">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download Converted File
+          </button>
+        </div>
+
+        <!-- History Section -->
+        <div id="history-section" class="history-section">
+          <h2 class="history-title">Conversion History</h2>
+          <div id="history-list" class="history-list"></div>
+          <button id="clear-history-btn" class="clear-history-btn">
+            Clear History
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <p>&copy; 2026 File Converter. Pure client-side conversion.</p>
+      </div>
+    </footer>
+
+    <script src="main.js"></script>
+  </body>
+</html>

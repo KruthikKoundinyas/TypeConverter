@@ -3,138 +3,50 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500&family=Playfair+Display:wght@480;500&display=swap" rel="stylesheet">
     <title>Conversion Result</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
-    <script>
-      (function() {
-        function setTheme() {
-          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const body = document.body;
-          const nav = document.querySelector('.fixed-nav');
-          
-          if (isDarkMode) {
-            body.classList.add('dark');
-            nav.classList.add('dark');
-          } else {
-            body.classList.remove('dark');
-            nav.classList.remove('dark');
-          }
-        }
-
-        // Set theme on load
-        setTheme();
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
-      })();
-    </script>
-
-    <style>
-      /* Centering the error message */
-      .error-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-      }
-
-      .error-message {
-        background-color: #fff;
-        padding: 20px;
-        text-align: center;
-        font-size: 18px;
-        border-radius: 10px;
-        width: 75%;
-        max-width: 600px;
-      }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   </head>
   <body>
-    <% if (locals.error) { %> <!-- Fixed error variable access -->
-      <div class="error-container">
-        <p class="error-message">
-          <button onclick="closeError()">X</button>
-          <%= error %>
-        </p>
-      </div>
-    <% } %>
-
-    <!-- Main Content -->
     <%- include('../partials/navbar') %>
     <%- include('../partials/header') %>
-    <h1>Conversion Result</h1>
-    <p>Your files have been converted successfully!</p>
     
-    <% files.forEach(file => { %>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <a href="/uploads/<%= file %>" download>
-        <img src="https://cdn-icons-png.flaticon.com/128/11480/11480539.png" alt="Download Icon" style="width: 10vh; height: 10vh; margin-right: 10px; margin-left: 10px;" />
-        Download Converted File: <%= file %>
-      </a>
-
-      <div id="preview-container" style="flex: 1; margin-top: 10px; display: flex; justify-content: center; align-items: center;">
-        <!-- Image Preview -->
-        <img
-          id="image-preview"
-          class="file-preview"
-          alt="Image Preview"
-          style="max-width: 300px; display: none; border: 1px solid #ccc; border-radius: 5px;"
-          src="/uploads/<%= file %>" 
-        />
-
-        <!-- Audio Preview -->
-        <audio
-          id="audio-preview"
-          class="file-preview"
-          controls
-          style="display: none; margin-top: 10px"
-        >
-          Your browser does not support the audio element.
-          <source src="/uploads/<%= file %>" type="audio/<%= file.split('.').pop() %>" />
-        </audio>
+    <div class="main-content">
+      <div class="container">
+        <div class="result-card">
+          <div class="result-header">
+            <div class="success-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <h1>Conversion Complete</h1>
+            <p class="success-message">Your files have been converted.</p>
+          </div>
+    
+    <% files.forEach((file, index) => { %>
+    <div class="file-result">
+      <div class="file-result-name"><%= file %></div>
+      <div class="file-result-format">Ready</div>
+      
+      <% if (locals.isZip) { %>
+      <div class="zip-info">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        <p>ZIP archive containing all files</p>
       </div>
-
-      <script>
-        // Get the file extension
-        const file = "<%= file %>";
-        const fileExtension = file.split('.').pop().toLowerCase();
-
-        // Check the file extension and show the appropriate preview
-        if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(fileExtension)) {
-          // Show image preview
-          document.getElementById('image-preview').style.display = 'block';
-          document.getElementById('audio-preview').style.display = 'none';
-        } else if (['mp3', 'wav', 'ogg', 'flac'].includes(fileExtension)) {
-          // Show audio preview
-          document.getElementById('image-preview').style.display = 'none';
-          document.getElementById('audio-preview').style.display = 'block';
-        } else {
-          // If file type is unknown, hide both previews or show an error message
-          document.getElementById('image-preview').style.display = 'none';
-          document.getElementById('audio-preview').style.display = 'none';
-          alert('Unsupported file type');
-        }
-      </script>
+      <% } else { %>
+      <div class="file-actions">
+        <a href="/uploads/<%= file %>" download class="download-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download
+        </a>
+      </div>
+      <% } %>
     </div>
     <% }) %>
-
-    <script>
-      function closeError() {
-        document.querySelector('.error-container').style.display = 'none';
-      }
-    </script>
     
-    <br />
     <%- include('../partials/footer') %>
   </body>
 </html>
