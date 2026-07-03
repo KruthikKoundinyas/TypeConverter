@@ -825,6 +825,7 @@ body {
 }
 
 .progress-fill {
+  width: 0;
   height: 100%;
   border-radius: 99px;
   background: var(--accent);

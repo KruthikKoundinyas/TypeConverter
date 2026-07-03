@@ -66,19 +66,20 @@ function handleKey(e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
   const k = e.key;
-  let changed = false;
+  let nd = null;
 
-  if ((k === 'ArrowUp' || k === 'w' || k === 'W') && dir.y !== 1) {
-    nextDir = { x: 0, y: -1 }; changed = true;
-  } else if ((k === 'ArrowDown' || k === 's' || k === 'S') && dir.y !== -1) {
-    nextDir = { x: 0, y: 1 }; changed = true;
-  } else if ((k === 'ArrowLeft' || k === 'a' || k === 'A') && dir.x !== 1) {
-    nextDir = { x: -1, y: 0 }; changed = true;
-  } else if ((k === 'ArrowRight' || k === 'd' || k === 'D') && dir.x !== -1) {
-    nextDir = { x: 1, y: 0 }; changed = true;
+  if (k === 'ArrowUp' || k === 'w' || k === 'W') nd = { x: 0, y: -1 };
+  else if (k === 'ArrowDown' || k === 's' || k === 'S') nd = { x: 0, y: 1 };
+  else if (k === 'ArrowLeft' || k === 'a' || k === 'A') nd = { x: -1, y: 0 };
+  else if (k === 'ArrowRight' || k === 'd' || k === 'D') nd = { x: 1, y: 0 };
+
+  if (nd && !(nd.x === -dir.x && nd.y === -dir.y)) {
+    nextDir = nd;
+  } else {
+    nd = null;
   }
 
-  if (changed) {
+  if (nd) {
     userOverride = true;
     clearTimeout(userTimer);
     userTimer = setTimeout(() => { userOverride = false; }, AUTOPILOT_RESUME);

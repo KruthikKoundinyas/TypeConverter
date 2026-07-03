@@ -6,17 +6,30 @@
     <title>TypeConverter — Private File Conversion</title>
     <meta name="description" content="Convert files privately in your browser. No uploads, no tracking, no ads. Images, audio, spreadsheets, code, archives — batch convert and download as ZIP." />
 
-    <!-- Open Graph -->
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp, Telegram, Discord, Slack, Reddit, iMessage) -->
     <meta property="og:title" content="TypeConverter — Private File Conversion" />
     <meta property="og:description" content="Your files. Converted. Privately. Multiple files in, one ZIP out — 100% on your device." />
-    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image" content="https://type-converter.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1536" />
+    <meta property="og:image:height" content="1024" />
+    <meta property="og:image:alt" content="TypeConverter pipeline diagram — files flow through browser-based conversion pipelines into a single ZIP download" />
+    <meta property="og:url" content="https://type-converter.vercel.app" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TypeConverter" />
 
-    <!-- Twitter Card -->
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="TypeConverter — Private File Conversion" />
     <meta name="twitter:description" content="Your files. Converted. Privately. Multiple files in, one ZIP out — 100% on your device." />
-    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image" content="https://type-converter.vercel.app/og-image.png" />
+    <meta name="twitter:image:alt" content="TypeConverter pipeline diagram — files flow through browser-based conversion pipelines into a single ZIP download" />
+
+    <!-- Discord embed accent / Chrome mobile toolbar -->
+    <meta name="theme-color" content="#5b5ef0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)" />
+
+    <!-- Apple / iMessage -->
+    <meta name="apple-mobile-web-app-title" content="TypeConverter" />
 
     <link rel="stylesheet" href="styles.css" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -49,6 +62,7 @@
           </p>
         </div>
         <button
+          type="button"
           id="theme-toggle"
           class="theme-toggle"
           aria-label="Toggle dark mode"
@@ -205,7 +219,7 @@
                 <span id="progress-pct" class="progress-pct"></span>
               </div>
               <div class="progress-track">
-                <div id="progress-bar" class="progress-fill" style="width: 0%"></div>
+                <div id="progress-bar" class="progress-fill"></div>
               </div>
             </div>
 
@@ -225,7 +239,7 @@
         <div id="result-section" class="result-section hidden">
           <h2 class="result-title">Conversion Result</h2>
           <div id="result-container" class="result-container"></div>
-          <button id="download-btn" class="download-btn">
+          <button type="button" id="download-btn" class="download-btn">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -249,7 +263,7 @@
         <div id="history-section" class="history-section">
           <h2 class="history-title">Conversion History</h2>
           <div id="history-list" class="history-list"></div>
-          <button id="clear-history-btn" class="clear-history-btn">
+          <button type="button" id="clear-history-btn" class="clear-history-btn">
             Clear History
           </button>
         </div>

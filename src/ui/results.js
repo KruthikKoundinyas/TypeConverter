@@ -92,6 +92,7 @@ export function showBatchResults(files) {
       outputFormat,
       originalSize: file.originalSize,
       convertedSize: file.convertedSize,
+      timestamp: Date.now(),
     });
   });
 

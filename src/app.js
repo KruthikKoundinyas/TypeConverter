@@ -5,7 +5,7 @@ import { updateFormatOptions, initFormatHandlers } from './ui/format.js';
 import { renderBatchConfirm, updateConvertButton } from './ui/batch.js';
 import { convertFiles } from './converter.js';
 import { downloadFile } from './ui/results.js';
-import { loadHistory, clearHistory } from './ui/history.js';
+import { loadHistory, clearHistory, renderHistory } from './ui/history.js';
 import { initTheme } from './ui/theme.js';
 import { initSnakeGame } from './ui/snake.js';
 
@@ -60,6 +60,7 @@ function init() {
   initEventListeners();
   updateConvertButton();
   loadHistory();
+  renderHistory();
   initTheme();
   initSnakeGame();
 }

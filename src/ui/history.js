@@ -4,10 +4,15 @@ import { escapeHtml, formatFileSize } from '../utils.js';
 export function loadHistory() {
   try {
     const stored = localStorage.getItem(HISTORY_KEY);
-    state.history = stored ? JSON.parse(stored) : [];
+    const parsed = stored ? JSON.parse(stored) : [];
+    state.history = Array.isArray(parsed) ? parsed.filter(validEntry) : [];
   } catch (e) {
     state.history = [];
   }
+}
+
+function validEntry(item) {
+  return item && typeof item === 'object' && typeof item.filename === 'string';
 }
 
 function saveHistory() {
@@ -22,11 +27,12 @@ export function addToHistory(entry) {
   state.history.unshift(entry);
   if (state.history.length > 50) state.history = state.history.slice(0, 50);
   saveHistory();
+  renderHistory();
 }
 
 export function clearHistory() {
   state.history = [];
-  saveHistory();
+  try { localStorage.removeItem(HISTORY_KEY); } catch (e) {}
   renderHistory();
 }
 
@@ -40,17 +46,20 @@ export function renderHistory() {
     return;
   }
 
-  historySection.style.display = 'block';
+  historySection.classList.remove('hidden');
   historyList.innerHTML = state.history
-    .map((item) => `
+    .map((item) => {
+      const time = item.timestamp ? new Date(item.timestamp).toLocaleString() : '';
+      return `
       <div class="history-item">
         <div class="history-info">
-          <span class="history-name">${escapeHtml(item.filename)}</span>
-          <span class="history-formats">${escapeHtml(item.inputFormat)} → ${escapeHtml(item.outputFormat)}</span>
+          <span class="history-name">${escapeHtml(item.filename || '')}</span>
+          <span class="history-formats">${escapeHtml(item.inputFormat || '?')} → ${escapeHtml(item.outputFormat || '?')}</span>
         </div>
         <div class="history-sizes">${formatFileSize(item.originalSize)} → ${formatFileSize(item.convertedSize)}</div>
-        <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+        ${time ? `<div class="history-time">${time}</div>` : ''}
       </div>
-    `)
+    `;
+    })
     .join('');
 }
