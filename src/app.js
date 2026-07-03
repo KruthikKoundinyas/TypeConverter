@@ -7,6 +7,7 @@ import { convertFiles } from './converter.js';
 import { downloadFile } from './ui/results.js';
 import { loadHistory, clearHistory } from './ui/history.js';
 import { initTheme } from './ui/theme.js';
+import { initSnakeGame } from './ui/snake.js';
 
 function refreshUI() {
   renderFileList();
@@ -60,6 +61,7 @@ function init() {
   updateConvertButton();
   loadHistory();
   initTheme();
+  initSnakeGame();
 }
 
 document.addEventListener('DOMContentLoaded', init);
