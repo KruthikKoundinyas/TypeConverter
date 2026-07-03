@@ -1,0 +1,98 @@
+Many files go in.
+
+Tool check file type.
+
+**Images**
+JPG, JPEG, PNG, WEBP, GIF, BMP, TIFF, SVG, ICO, HEIC, RAW
+→ **Sharp / ImageMagick**
+
+**Audio**
+MP3, WAV, FLAC, OGG, AAC, M4A
+→ **FFmpeg**
+
+**Video**
+MP4, MOV, AVI, MKV, WEBM, GIF
+→ **FFmpeg**
+
+**Documents**
+PDF, DOC, DOCX, TXT, RTF, ODT, EPUB
+→ **LibreOffice / Pandoc / PDF tools**
+
+**Spreadsheets / Data**
+CSV, XLS, XLSX, JSON, XML
+→ Spreadsheet parser / converter
+
+**Presentations**
+PPT, PPTX, PDF
+→ **LibreOffice**
+
+**Code / Text**
+HTML, Markdown, JSON, YAML, XML
+→ Parser / formatter
+
+**Archives**
+ZIP, RAR, 7Z, TAR, GZ
+→ Archive tool
+
+Tool rebuild each file in new format.
+
+Many outputs collected.
+
+Zip tool compress all outputs.
+
+One ZIP file come out.
+
+Browser or server do work.
+
+No upload = more private.
+
+project has at high level: 8 pipelines (one per file family).
+
+Image pipeline
+File → detect image → Sharp / ImageMagick → converted image
+Audio pipeline
+File → detect audio → FFmpeg → converted audio
+Video pipeline
+File → detect video → FFmpeg → converted video
+Document pipeline
+File → detect document → LibreOffice / Pandoc → converted doc
+Spreadsheet pipeline
+File → parse table/data → converter → output
+Presentation pipeline
+File → presentation engine → output
+Code/Text pipeline
+File → parser → reformat / convert
+Archive pipeline
+File(s) → compress / extract → ZIP / 7Z / TAR
+
+Then one final pipeline:
+
+Batch packaging pipeline
+All converted files → archive tool → one ZIP download
+
+Other converter:
+File go to stranger server.
+Wait. Ads everywhere. Privacy bad.
+
+Your converter:
+
+File stay on device
+No upload
+No tracking
+No ads
+Many files at once
+One ZIP download
+Fast (browser does work)
+
+Big difference:
+
+Other tools sell conversion.
+You sell privacy + speed + simplicity.
+
+In caveman:
+
+Other cave say:
+“Give me file. Trust me.”
+
+Your cave say:
+“Keep file. I help here.”
