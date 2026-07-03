@@ -6,9 +6,20 @@
     <title>File Converter</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <!-- FFmpeg WASM for audio conversion -->
+    <!-- FFmpeg WASM for audio/video conversion -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/umd/ffmpeg.js"></script>
     <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+    <!-- Code/Text pipeline: Markdown, YAML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <!-- Archive pipeline + batch ZIP -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <!-- Spreadsheet pipeline -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Image pipeline: HEIC decode, TIFF encode -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
   </head>
   <body>
     <!-- Animated Background -->
@@ -80,7 +91,7 @@
                 type="file"
                 id="file-input"
                 class="file-input-hidden"
-                accept="image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.ico,.tif,.tiff,.raw,.tga,audio/*,video/*"
+                accept="image/*,.heic,.heif,.tiff,.tif,.bmp,.svg,audio/*,video/*,.pdf,.doc,.docx,.txt,.rtf,.odt,.epub,.csv,.xls,.xlsx,.tsv,.json,.xml,.ppt,.pptx,.odp,.html,.htm,.md,.yaml,.yml,.zip,.rar,.7z,.tar,.gz,.tgz,.bz2"
                 multiple
               />
               <label for="file-input" class="drop-zone-label">
@@ -106,128 +117,93 @@
                 <h3 class="upload-title">Drag & drop files here</h3>
                 <p class="upload-hint">or click to browse</p>
                 <p class="upload-formats">
-                  Supports: JPEG, PNG, WEBP, GIF, MP3, WAV, OGG
+                  Images, Audio, Video, Documents, Spreadsheets, Code, Archives
                 </p>
               </label>
             </div>
 
-            <!-- Selected Files Display -->
-            <div id="selected-files" class="selected-files"></div>
+            <div class="privacy-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span>Files never leave your device</span>
+            </div>
+
+            <!-- File List (collapsed by default) -->
+            <div id="file-list-section" class="file-list-section hidden">
+              <div class="file-list-header">
+                <button type="button" id="file-list-toggle" class="file-list-toggle">
+                  <span id="file-list-summary">0 files</span>
+                  <span class="chevron">▾</span>
+                </button>
+                <button type="button" id="clear-files-btn" class="clear-files-btn">Clear all</button>
+              </div>
+              <div id="file-list-body" class="file-list-body hidden"></div>
+            </div>
 
             <!-- Format Selection -->
-            <div class="format-selection">
-              <label for="format-select">Select Output Format:</label>
-              <select id="format-select">
-                <option value="">--Choose a format--</option>
-                <optgroup label="Images" class="image-formats">
-                  <option value="jpeg">JPEG</option>
-                  <option value="png">PNG</option>
-                  <option value="webp">WEBP</option>
-                  <option value="gif">GIF</option>
-                </optgroup>
-                <optgroup label="Audio" class="audio-formats">
-                  <option value="mp3">MP3</option>
-                  <option value="wav">WAV</option>
-                  <option value="ogg">OGG</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <!-- Quality/Compression Settings -->
-            <div
-              class="compression-settings"
-              id="compression-settings"
-              class="hidden"
-            >
-              <div
-                class="quality-slider"
-                id="image-quality-container"
-                class="hidden"
-              >
-                <label for="quality-slider"
-                  >Quality: <span id="quality-value">80</span>%</label
-                >
-                <input
-                  type="range"
-                  id="quality-slider"
-                  min="10"
-                  max="100"
-                  value="80"
-                  class="slider"
-                />
-                <p class="quality-hint">Lower quality = smaller file size</p>
+            <div id="format-section" class="format-section hidden">
+              <div class="format-controls">
+                <div class="format-global">
+                  <label for="format-select">Convert all to:</label>
+                  <select id="format-select">
+                    <option value="">--Choose a format--</option>
+                  </select>
+                </div>
+                <label class="advanced-label" id="advanced-label">
+                  <input type="checkbox" id="advanced-toggle">
+                  <span>Set per file</span>
+                </label>
               </div>
-              <div
-                class="bitrate-select"
-                id="audio-bitrate-container"
-                class="hidden"
-              >
-                <label for="bitrate-select">Audio Bitrate:</label>
-                <select id="bitrate-select">
-                  <option value="64000">64 kbps (Smallest)</option>
-                  <option value="128000" selected>
-                    128 kbps (Recommended)
-                  </option>
-                  <option value="192000">192 kbps</option>
-                  <option value="320000">320 kbps (Best Quality)</option>
-                </select>
-                <p class="bitrate-hint">
-                  Higher bitrate = better quality, larger file
-                </p>
+
+              <!-- Quality/Compression (shown for image/audio formats) -->
+              <div class="compression-settings hidden" id="compression-settings">
+                <div class="quality-slider hidden" id="image-quality-container">
+                  <label for="quality-slider">Quality: <span id="quality-value">80</span>%</label>
+                  <input type="range" id="quality-slider" min="10" max="100" value="80" class="slider" />
+                  <p class="quality-hint">Lower quality = smaller file size</p>
+                </div>
+                <div class="bitrate-select hidden" id="audio-bitrate-container">
+                  <label for="bitrate-select">Audio Bitrate:</label>
+                  <select id="bitrate-select">
+                    <option value="64000">64 kbps (Smallest)</option>
+                    <option value="128000" selected>128 kbps (Recommended)</option>
+                    <option value="192000">192 kbps</option>
+                    <option value="320000">320 kbps (Best Quality)</option>
+                  </select>
+                  <p class="bitrate-hint">Higher bitrate = better quality, larger file</p>
+                </div>
               </div>
             </div>
 
-            <!-- Loading Spinner -->
-            <div id="loading-spinner" class="loading-spinner hidden">
-              <div class="spinner"></div>
-              <p class="spinner-text">Converting...</p>
-              <p id="progress-text" class="progress-text"></p>
+            <!-- Batch Confirmation -->
+            <div id="batch-confirm" class="batch-confirm hidden">
+              <div class="batch-confirm-header">
+                <span class="batch-title">Batch summary</span>
+                <span id="batch-stats" class="batch-stats"></span>
+              </div>
+              <div id="batch-list" class="batch-list"></div>
+            </div>
+
+            <!-- Progress -->
+            <div id="loading-spinner" class="progress-section hidden">
+              <div class="progress-header">
+                <span class="spinner"></span>
+                <span id="progress-text" class="progress-label">Converting...</span>
+                <span id="progress-pct" class="progress-pct"></span>
+              </div>
+              <div class="progress-track">
+                <div id="progress-bar" class="progress-fill" style="width: 0%"></div>
+              </div>
             </div>
 
             <!-- Convert Button -->
-            <button id="convert-btn" class="convert-btn" disabled>
+            <button type="button" id="convert-btn" class="convert-btn" disabled>
               <span class="btn-text">Convert Files</span>
-              <svg
-                class="btn-icon"
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+              <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
             </button>
-          </div>
-        </div>
-
-        <!-- Preview Section -->
-        <div id="preview-section" class="preview-section">
-          <h2 class="preview-title">Preview</h2>
-          <div class="preview-container">
-            <!-- Image Preview -->
-            <img
-              id="image-preview"
-              class="preview-image hidden"
-              alt="Image Preview"
-            />
-            <!-- Audio Preview -->
-            <audio id="audio-preview" class="preview-audio hidden" controls>
-              Your browser does not support the audio element.
-            </audio>
-            <!-- Video Preview -->
-            <video id="video-preview" class="preview-video hidden" controls>
-              Your browser does not support the video element.
-            </video>
-            <div id="preview-placeholder" class="preview-placeholder">
-              <p>No file selected</p>
-            </div>
           </div>
         </div>
 
@@ -273,6 +249,6 @@
       </div>
     </footer>
 
-    <script src="main.js"></script>
+    <script type="module" src="src/app.js"></script>
   </body>
 </html>

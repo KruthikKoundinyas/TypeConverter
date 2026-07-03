@@ -6,13 +6,138 @@
 // ========================================
 // State Management
 // ========================================
+let ffmpeg = null;
+let ffmpegLoaded = false;
+let ffmpegLoading = false;
+
+const MAX_FILES = 100;
+const MAX_TOTAL_SIZE = 500 * 1024 * 1024;
+
 const state = {
   files: [],
   selectedFormat: null,
+  perFileFormats: {},
+  usePerFileFormats: false,
   convertedBlob: null,
   convertedFilename: null,
   history: [],
 };
+
+// ========================================
+// Pipeline Registry
+// ========================================
+const PIPELINES = {
+  image: {
+    label: 'Images',
+    extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif', 'svg', 'ico', 'heic', 'heif', 'raw', 'tga'],
+    outputs: [
+      { ext: 'jpeg', label: 'JPEG' },
+      { ext: 'png', label: 'PNG' },
+      { ext: 'webp', label: 'WEBP' },
+      { ext: 'gif', label: 'GIF' },
+      { ext: 'bmp', label: 'BMP' },
+      { ext: 'tiff', label: 'TIFF' },
+    ],
+  },
+  audio: {
+    label: 'Audio',
+    extensions: ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'],
+    outputs: [
+      { ext: 'mp3', label: 'MP3' },
+      { ext: 'wav', label: 'WAV' },
+      { ext: 'ogg', label: 'OGG' },
+      { ext: 'flac', label: 'FLAC' },
+      { ext: 'aac', label: 'AAC' },
+      { ext: 'm4a', label: 'M4A' },
+    ],
+  },
+  video: {
+    label: 'Video',
+    extensions: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
+    outputs: [
+      { ext: 'mp4', label: 'MP4' },
+      { ext: 'webm', label: 'WEBM' },
+      { ext: 'gif', label: 'GIF (animated)' },
+    ],
+  },
+  document: {
+    label: 'Documents',
+    extensions: ['pdf', 'doc', 'docx', 'rtf', 'odt', 'epub'],
+    outputs: [
+      { ext: 'pdf', label: 'PDF' },
+      { ext: 'txt', label: 'Plain Text' },
+      { ext: 'html', label: 'HTML' },
+    ],
+  },
+  spreadsheet: {
+    label: 'Spreadsheets',
+    extensions: ['csv', 'xls', 'xlsx', 'tsv'],
+    outputs: [
+      { ext: 'csv', label: 'CSV' },
+      { ext: 'json', label: 'JSON' },
+      { ext: 'xlsx', label: 'XLSX' },
+    ],
+  },
+  presentation: {
+    label: 'Presentations',
+    extensions: ['ppt', 'pptx', 'odp'],
+    outputs: [
+      { ext: 'pdf', label: 'PDF' },
+    ],
+  },
+  code: {
+    label: 'Code / Text',
+    extensions: ['html', 'htm', 'md', 'markdown', 'json', 'yaml', 'yml', 'xml', 'txt'],
+    outputs: [
+      { ext: 'html', label: 'HTML' },
+      { ext: 'md', label: 'Markdown' },
+      { ext: 'json', label: 'JSON' },
+      { ext: 'yaml', label: 'YAML' },
+      { ext: 'xml', label: 'XML' },
+      { ext: 'txt', label: 'Plain Text' },
+    ],
+  },
+  archive: {
+    label: 'Archives',
+    extensions: ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2'],
+    outputs: [
+      { ext: 'zip', label: 'ZIP' },
+      { ext: 'tar', label: 'TAR' },
+      { ext: 'gz', label: 'GZ' },
+    ],
+  },
+};
+
+const EXT_TO_PIPELINE = {};
+for (const [key, p] of Object.entries(PIPELINES)) {
+  for (const ext of p.extensions) {
+    if (!EXT_TO_PIPELINE[ext]) EXT_TO_PIPELINE[ext] = key;
+  }
+}
+
+const MIME_TO_PIPELINE = {
+  'image/': 'image',
+  'audio/': 'audio',
+  'video/': 'video',
+};
+
+function detectPipeline(file) {
+  const ext = getFileExtension(file.name);
+  if (ext && EXT_TO_PIPELINE[ext]) return EXT_TO_PIPELINE[ext];
+  const mime = file.type || '';
+  for (const [prefix, pipeline] of Object.entries(MIME_TO_PIPELINE)) {
+    if (mime.startsWith(prefix)) return pipeline;
+  }
+  return null;
+}
+
+function getPipelineOutputs(pipelineKey) {
+  return PIPELINES[pipelineKey]?.outputs || [];
+}
+
+function isFormatValidForPipeline(pipelineKey, format) {
+  return getPipelineOutputs(pipelineKey).some(o => o.ext === format);
+}
 
 // ========================================
 // LocalStorage History
@@ -84,30 +209,33 @@ function renderHistory() {
 const elements = {
   dropZone: document.getElementById("drop-zone"),
   fileInput: document.getElementById("file-input"),
-  selectedFiles: document.getElementById("selected-files"),
   formatSelect: document.getElementById("format-select"),
   convertBtn: document.getElementById("convert-btn"),
-  previewSection: document.getElementById("preview-section"),
-  imagePreview: document.getElementById("image-preview"),
-  audioPreview: document.getElementById("audio-preview"),
-  videoPreview: document.getElementById("video-preview"),
-  previewPlaceholder: document.getElementById("preview-placeholder"),
   resultSection: document.getElementById("result-section"),
   resultContainer: document.getElementById("result-container"),
   downloadBtn: document.getElementById("download-btn"),
-  // Compression settings
   qualitySlider: document.getElementById("quality-slider"),
   qualityValue: document.getElementById("quality-value"),
   bitrateSelect: document.getElementById("bitrate-select"),
-  // History elements
   historySection: document.getElementById("history-section"),
   historyList: document.getElementById("history-list"),
   clearHistoryBtn: document.getElementById("clear-history-btn"),
-  // Loading spinner
   loadingSpinner: document.getElementById("loading-spinner"),
   progressText: document.getElementById("progress-text"),
-  // Theme toggle
+  progressBar: document.getElementById("progress-bar"),
+  progressPct: document.getElementById("progress-pct"),
   themeToggle: document.getElementById("theme-toggle"),
+  fileListSection: document.getElementById("file-list-section"),
+  fileListToggle: document.getElementById("file-list-toggle"),
+  fileListSummary: document.getElementById("file-list-summary"),
+  fileListBody: document.getElementById("file-list-body"),
+  clearFilesBtn: document.getElementById("clear-files-btn"),
+  formatSection: document.getElementById("format-section"),
+  advancedToggle: document.getElementById("advanced-toggle"),
+  advancedLabel: document.getElementById("advanced-label"),
+  batchConfirm: document.getElementById("batch-confirm"),
+  batchStats: document.getElementById("batch-stats"),
+  batchList: document.getElementById("batch-list"),
 };
 
 // ========================================
@@ -143,11 +271,32 @@ function getMimeType(extension) {
     gif: "image/gif",
     webp: "image/webp",
     bmp: "image/bmp",
+    tiff: "image/tiff",
+    tif: "image/tiff",
+    svg: "image/svg+xml",
+    heic: "image/heic",
+    heif: "image/heif",
+    ico: "image/x-icon",
     mp3: "audio/mpeg",
     wav: "audio/wav",
     ogg: "audio/ogg",
+    flac: "audio/flac",
+    aac: "audio/aac",
+    m4a: "audio/mp4",
     mp4: "video/mp4",
     webm: "video/webm",
+    html: "text/html",
+    md: "text/markdown",
+    json: "application/json",
+    yaml: "text/yaml",
+    yml: "text/yaml",
+    xml: "application/xml",
+    txt: "text/plain",
+    csv: "text/csv",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    zip: "application/zip",
+    tar: "application/x-tar",
+    gz: "application/gzip",
   };
   return mimeTypes[extension] || "application/octet-stream";
 }
@@ -254,52 +403,300 @@ async function loadFFmpeg() {
  * @param {string} outputFormat - Target format (mp3, wav, ogg)
  * @returns {Promise<Blob>} - Converted file as Blob
  */
-async function convertAudioWithFFmpeg(file, outputFormat) {
+function getAudioCodecArgs(outputFormat, bitrate) {
+  switch (outputFormat) {
+    case "mp3":
+      return ["-codec:a", "libmp3lame", "-b:a", bitrate];
+    case "ogg":
+      return ["-codec:a", "libvorbis", "-b:a", bitrate];
+    case "flac":
+      return ["-codec:a", "flac"];
+    case "aac":
+      return ["-codec:a", "aac", "-b:a", bitrate];
+    case "m4a":
+      return ["-codec:a", "aac", "-b:a", bitrate, "-f", "ipod"];
+    case "wav":
+      return ["-codec:a", "pcm_s16le"];
+    default:
+      return ["-codec:a", "pcm_s16le"];
+  }
+}
+
+async function convertAudioWithFFmpeg(file, outputFormat, bitrate = "128000") {
   const { fetchFile } = FFmpegUtil;
 
-  // Load FFmpeg if not already loaded
   const loaded = await loadFFmpeg();
   if (!loaded) {
     throw new Error("Failed to load FFmpeg. Please try again.");
   }
 
   try {
-    // Read input file
     const inputData = await fetchFile(file);
-    const inputExt = file.name.split(".").pop().toLowerCase();
+    const inputExt = getFileExtension(file.name);
     const inputName = `input.${inputExt}`;
-    const outputName = `output.${outputFormat}`;
+    const outExt = outputFormat === "m4a" ? "m4a" : outputFormat;
+    const outputName = `output.${outExt}`;
 
-    // Write input file to FFmpeg's virtual filesystem
     await ffmpeg.writeFile(inputName, inputData);
 
-    // Run FFmpeg command
-    await ffmpeg.exec([
-      "-i",
-      inputName,
-      "-codec:a",
-      outputFormat === "mp3"
-        ? "libmp3lame"
-        : outputFormat === "ogg"
-          ? "libvorbis"
-          : "pcm_s16le",
-      outputName,
-    ]);
+    const codecArgs = getAudioCodecArgs(outputFormat, bitrate);
+    await ffmpeg.exec(["-i", inputName, ...codecArgs, outputName]);
 
-    // Read output file
     const outputData = await ffmpeg.readFile(outputName);
 
-    // Clean up virtual files
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
 
-    // Create Blob from output
     const mimeType = getMimeType(outputFormat);
-    return new Blob([outputData.buffer], { type: mimeType });
+    const blob = new Blob([outputData.buffer], { type: mimeType });
+    return { blob, originalSize: file.size, convertedSize: blob.size };
   } catch (error) {
     console.error("[FFmpeg] Conversion error:", error);
     throw new Error(`Audio conversion failed: ${error.message}`);
   }
+}
+
+// ========================================
+// Code / Text Pipeline
+// ========================================
+
+async function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
+function jsonToXml(obj, rootName = "root") {
+  function serialize(value, tag) {
+    if (value === null || value === undefined) return `<${tag}/>`;
+    if (Array.isArray(value)) {
+      return value.map((item) => serialize(item, "item")).join("\n");
+    }
+    if (typeof value === "object") {
+      const children = Object.entries(value)
+        .map(([k, v]) => serialize(v, k))
+        .join("\n");
+      return `<${tag}>\n${children}\n</${tag}>`;
+    }
+    const escaped = String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    return `<${tag}>${escaped}</${tag}>`;
+  }
+  return '<?xml version="1.0" encoding="UTF-8"?>\n' + serialize(obj, rootName);
+}
+
+function xmlToJson(xmlString) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlString, "application/xml");
+  const errorNode = doc.querySelector("parsererror");
+  if (errorNode) throw new Error("Invalid XML");
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent.trim();
+      return text || null;
+    }
+    const children = Array.from(node.childNodes).filter(
+      (n) => n.nodeType === Node.ELEMENT_NODE || (n.nodeType === Node.TEXT_NODE && n.textContent.trim()),
+    );
+    if (children.length === 1 && children[0].nodeType === Node.TEXT_NODE) {
+      return children[0].textContent.trim();
+    }
+    const result = {};
+    for (const child of children) {
+      if (child.nodeType !== Node.ELEMENT_NODE) continue;
+      const key = child.tagName;
+      const value = walk(child);
+      if (result[key] !== undefined) {
+        if (!Array.isArray(result[key])) result[key] = [result[key]];
+        result[key].push(value);
+      } else {
+        result[key] = value;
+      }
+    }
+    return Object.keys(result).length ? result : node.textContent.trim() || "";
+  }
+  return walk(doc.documentElement);
+}
+
+async function convertCodeText(file, targetFormat) {
+  const text = await readFileAsText(file);
+  const srcExt = getFileExtension(file.name);
+  let output;
+
+  if (targetFormat === "html") {
+    if (srcExt === "md" || srcExt === "markdown") {
+      output = marked.parse(text);
+    } else if (srcExt === "json") {
+      output = "<pre>" + escapeHtml(JSON.stringify(JSON.parse(text), null, 2)) + "</pre>";
+    } else if (srcExt === "yaml" || srcExt === "yml") {
+      const data = jsyaml.load(text);
+      output = "<pre>" + escapeHtml(JSON.stringify(data, null, 2)) + "</pre>";
+    } else if (srcExt === "xml") {
+      output = "<pre>" + escapeHtml(text) + "</pre>";
+    } else {
+      output = "<pre>" + escapeHtml(text) + "</pre>";
+    }
+  } else if (targetFormat === "md") {
+    if (srcExt === "html" || srcExt === "htm") {
+      const td = new TurndownService();
+      output = td.turndown(text);
+    } else if (srcExt === "json") {
+      output = "```json\n" + JSON.stringify(JSON.parse(text), null, 2) + "\n```";
+    } else if (srcExt === "yaml" || srcExt === "yml") {
+      output = "```yaml\n" + text + "\n```";
+    } else if (srcExt === "xml") {
+      output = "```xml\n" + text + "\n```";
+    } else {
+      output = text;
+    }
+  } else if (targetFormat === "json") {
+    if (srcExt === "yaml" || srcExt === "yml") {
+      const data = jsyaml.load(text);
+      output = JSON.stringify(data, null, 2);
+    } else if (srcExt === "xml") {
+      const data = xmlToJson(text);
+      output = JSON.stringify(data, null, 2);
+    } else if (srcExt === "json") {
+      output = JSON.stringify(JSON.parse(text), null, 2);
+    } else {
+      output = JSON.stringify({ content: text });
+    }
+  } else if (targetFormat === "yaml") {
+    if (srcExt === "json") {
+      const data = JSON.parse(text);
+      output = jsyaml.dump(data, { indent: 2 });
+    } else if (srcExt === "xml") {
+      const data = xmlToJson(text);
+      output = jsyaml.dump(data, { indent: 2 });
+    } else if (srcExt === "yaml" || srcExt === "yml") {
+      const data = jsyaml.load(text);
+      output = jsyaml.dump(data, { indent: 2 });
+    } else {
+      output = jsyaml.dump({ content: text }, { indent: 2 });
+    }
+  } else if (targetFormat === "xml") {
+    if (srcExt === "json") {
+      const data = JSON.parse(text);
+      output = jsonToXml(data);
+    } else if (srcExt === "yaml" || srcExt === "yml") {
+      const data = jsyaml.load(text);
+      output = jsonToXml(data);
+    } else if (srcExt === "xml") {
+      output = text;
+    } else {
+      output = jsonToXml({ content: text });
+    }
+  } else if (targetFormat === "txt") {
+    if (srcExt === "html" || srcExt === "htm") {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = text;
+      output = tmp.textContent || tmp.innerText || "";
+    } else if (srcExt === "json") {
+      output = JSON.stringify(JSON.parse(text), null, 2);
+    } else {
+      output = text;
+    }
+  } else {
+    output = text;
+  }
+
+  const blob = new Blob([output], { type: getMimeType(targetFormat) });
+  return { blob, originalSize: file.size, convertedSize: blob.size };
+}
+
+// ========================================
+// Spreadsheet Pipeline
+// ========================================
+
+async function convertSpreadsheet(file, targetFormat) {
+  const srcExt = getFileExtension(file.name);
+  let workbook;
+
+  if (srcExt === "csv" || srcExt === "tsv") {
+    const text = await readFileAsText(file);
+    workbook = XLSX.read(text, { type: "string" });
+  } else {
+    const buffer = await file.arrayBuffer();
+    workbook = XLSX.read(buffer, { type: "array" });
+  }
+
+  let output;
+  let mimeType;
+
+  if (targetFormat === "csv") {
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    output = XLSX.utils.sheet_to_csv(sheet);
+    mimeType = "text/csv";
+    const blob = new Blob([output], { type: mimeType });
+    return { blob, originalSize: file.size, convertedSize: blob.size };
+  } else if (targetFormat === "json") {
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet);
+    output = JSON.stringify(data, null, 2);
+    mimeType = "application/json";
+    const blob = new Blob([output], { type: mimeType });
+    return { blob, originalSize: file.size, convertedSize: blob.size };
+  } else if (targetFormat === "xlsx") {
+    const xlsxData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([xlsxData], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    return { blob, originalSize: file.size, convertedSize: blob.size };
+  }
+
+  throw new Error(`Unsupported spreadsheet output format: ${targetFormat}`);
+}
+
+// ========================================
+// Archive Pipeline
+// ========================================
+
+async function convertArchive(file, targetFormat) {
+  const srcExt = getFileExtension(file.name);
+
+  if (srcExt === "zip" && targetFormat === "zip") {
+    return { blob: file, originalSize: file.size, convertedSize: file.size };
+  }
+
+  if (srcExt === "zip") {
+    const buffer = await file.arrayBuffer();
+    const srcZip = await JSZip.loadAsync(buffer);
+
+    if (targetFormat === "zip") {
+      const newZip = new JSZip();
+      for (const [name, entry] of Object.entries(srcZip.files)) {
+        if (!entry.dir) {
+          const data = await entry.async("uint8array");
+          newZip.file(name, data);
+        }
+      }
+      const blob = await newZip.generateAsync({ type: "blob" });
+      return { blob, originalSize: file.size, convertedSize: blob.size };
+    }
+  }
+
+  if (targetFormat === "zip") {
+    const zip = new JSZip();
+    const buffer = await file.arrayBuffer();
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+    zip.file(file.name, buffer);
+    const blob = await zip.generateAsync({
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 },
+    });
+    return { blob, originalSize: file.size, convertedSize: blob.size };
+  }
+
+  throw new Error(
+    `Archive conversion from .${srcExt} to .${targetFormat} is not yet supported`,
+  );
 }
 
 // ========================================
@@ -359,211 +756,307 @@ function handleDrop(e) {
 // File Handling
 // ========================================
 
-/**
- * Handle file selection from input
- */
-function handleFiles(files) {
-  const newFiles = Array.from(files).filter((file) => {
-    // Filter for supported types
-    const supportedImageTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "image/bmp",
-    ];
-    const supportedAudioTypes = ["audio/mpeg", "audio/wav", "audio/ogg"];
-    const supportedVideoTypes = ["video/mp4", "video/webm"];
+function getFileLimit() {
+  if (state.files.length === 0) return MAX_FILES;
+  const totalSize = state.files.reduce((s, f) => s + f.size, 0);
+  const avg = totalSize / state.files.length;
+  if (avg < 1 * 1024 * 1024) return 100;
+  if (avg < 5 * 1024 * 1024) return 50;
+  return 25;
+}
 
-    // Check file size - warn for large files
-    if (file.size > MAX_FILE_SIZE) {
-      console.warn(
-        `File ${file.name} exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`,
-      );
+function handleFiles(files) {
+  const rejected = [];
+  let accepted = 0;
+  const limit = getFileLimit();
+  const totalSize = state.files.reduce((s, f) => s + f.size, 0);
+
+  const newFiles = Array.from(files).filter((file) => {
+    if (state.files.length + accepted >= limit) {
+      rejected.push(`${file.name}: limit of ${limit} files reached`);
       return false;
     }
-
-    return (
-      supportedImageTypes.includes(file.type) ||
-      supportedAudioTypes.includes(file.type) ||
-      supportedVideoTypes.includes(file.type)
-    );
+    if (totalSize + file.size > MAX_TOTAL_SIZE) {
+      rejected.push(`${file.name}: total size would exceed 500 MB`);
+      return false;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      rejected.push(`${file.name}: exceeds 100 MB per-file limit`);
+      return false;
+    }
+    const pipeline = detectPipeline(file);
+    if (!pipeline) {
+      rejected.push(`${file.name}: unsupported file type`);
+      return false;
+    }
+    accepted++;
+    return true;
   });
 
-  if (newFiles.length === 0) {
-    alert("Please select valid image, audio, or video files under 100MB.");
+  if (newFiles.length === 0 && state.files.length === 0) {
+    const msg = rejected.length
+      ? "No supported files found:\n" + rejected.join("\n")
+      : "Please select a supported file.";
+    alert(msg);
     return;
   }
 
-  // Add to state
   state.files = [...state.files, ...newFiles];
+  if (rejected.length > 0) {
+    alert(`${newFiles.length} file(s) added, ${rejected.length} rejected:\n${rejected.slice(0, 5).join("\n")}${rejected.length > 5 ? "\n..." : ""}`);
+  }
 
-  // Update UI
-  updateSelectedFiles();
-  updateFormatOptions();
-  showPreviews();
-  updateConvertButton();
+  refreshUI();
 }
 
-/**
- * Update selected files display
- */
-function updateSelectedFiles() {
-  elements.selectedFiles.innerHTML = "";
-
-  state.files.forEach((file, index) => {
-    const tag = document.createElement("span");
-    tag.className = "file-tag";
-    tag.innerHTML = `
-            ${file.name}
-            <span class="remove-file" data-index="${index}">&times;</span>
-        `;
-    elements.selectedFiles.appendChild(tag);
-  });
-
-  // Add remove file listeners
-  document.querySelectorAll(".remove-file").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const index = parseInt(e.target.dataset.index);
-      removeFile(index);
-    });
-  });
-}
-
-/**
- * Remove file from selection
- */
 function removeFile(index) {
   state.files.splice(index, 1);
-  updateSelectedFiles();
+  delete state.perFileFormats[index];
+  const rebuilt = {};
+  Object.keys(state.perFileFormats).forEach((k) => {
+    const ki = parseInt(k);
+    if (ki > index) rebuilt[ki - 1] = state.perFileFormats[ki];
+    else rebuilt[ki] = state.perFileFormats[ki];
+  });
+  state.perFileFormats = rebuilt;
+  refreshUI();
+}
+
+function clearAllFiles() {
+  state.files = [];
+  state.perFileFormats = {};
+  state.selectedFormat = null;
+  state.usePerFileFormats = false;
+  elements.advancedToggle.checked = false;
+  refreshUI();
+}
+
+function refreshUI() {
+  renderFileList();
   updateFormatOptions();
-  showPreviews();
+  renderBatchConfirm();
   updateConvertButton();
-}
 
-/**
- * Update format dropdown based on file types
- */
-function updateFormatOptions() {
-  const formatSelect = elements.formatSelect;
-  const imageFormats = formatSelect.querySelectorAll(".image-formats option");
-  const audioFormats = formatSelect.querySelectorAll(".audio-formats option");
-
-  // Reset all options
-  imageFormats.forEach((opt) => (opt.disabled = false));
-  audioFormats.forEach((opt) => (opt.disabled = false));
-
-  if (state.files.length === 0) {
-    state.selectedFormat = null;
-    formatSelect.value = "";
-    return;
-  }
-
-  // Check what file types are present
-  let hasImages = state.files.some(isImage);
-  let hasAudio = state.files.some(isAudio);
-  let hasVideo = state.files.some(isVideo);
-
-  // Disable incompatible formats
-  if (hasImages && !hasAudio && !hasVideo) {
-    audioFormats.forEach((opt) => (opt.disabled = true));
-  } else if (hasAudio && !hasImages && !hasVideo) {
-    imageFormats.forEach((opt) => (opt.disabled = true));
+  const hasFiles = state.files.length > 0;
+  elements.fileListSection.classList.toggle("hidden", !hasFiles);
+  elements.formatSection.classList.toggle("hidden", !hasFiles);
+  if (!hasFiles) {
+    elements.batchConfirm.classList.add("hidden");
   }
 }
 
-/**
- * Show file previews
- */
-function showPreviews() {
-  const { imagePreview, audioPreview, videoPreview, previewPlaceholder } =
-    elements;
+// ========================================
+// File List (collapsible preview)
+// ========================================
 
-  // Reset all previews
-  imagePreview.classList.add("hidden");
-  audioPreview.classList.add("hidden");
-  videoPreview.classList.add("hidden");
+const PIPELINE_ICONS = {
+  image: "🖼", audio: "🎵", video: "🎬", document: "📄",
+  spreadsheet: "📊", presentation: "📽", code: "📝", archive: "📦",
+};
 
-  if (state.files.length === 0) {
-    previewPlaceholder.classList.remove("hidden");
-    return;
-  }
+function renderFileList() {
+  const totalSize = state.files.reduce((s, f) => s + f.size, 0);
+  const limit = getFileLimit();
+  elements.fileListSummary.textContent =
+    `${state.files.length} file${state.files.length !== 1 ? "s" : ""} (${formatFileSize(totalSize)}) — limit ${limit}`;
 
-  previewPlaceholder.classList.add("hidden");
+  const body = elements.fileListBody;
+  body.innerHTML = "";
 
-  // Show first valid file preview
-  for (const file of state.files) {
-    if (isImage(file)) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        imagePreview.src = e.target.result;
-        imagePreview.classList.remove("hidden");
-      };
-      reader.readAsDataURL(file);
-      break;
-    } else if (isAudio(file)) {
+  state.files.forEach((file, i) => {
+    const pipeline = detectPipeline(file);
+    const icon = PIPELINE_ICONS[pipeline] || "📎";
+    const ext = getFileExtension(file.name).toUpperCase();
+
+    const row = document.createElement("div");
+    row.className = "fl-row";
+
+    let thumbHtml = `<span class="fl-icon">${icon}</span>`;
+    const noNativePreview = ["heic", "heif", "tiff", "tif"];
+    if (pipeline === "image" && !noNativePreview.includes(ext.toLowerCase())) {
       const url = URL.createObjectURL(file);
-      audioPreview.src = url;
-      audioPreview.classList.remove("hidden");
-      break;
-    } else if (isVideo(file)) {
-      const url = URL.createObjectURL(file);
-      videoPreview.src = url;
-      videoPreview.classList.remove("hidden");
-      break;
+      thumbHtml = `<img src="${url}" class="fl-thumb" alt="" />`;
     }
-  }
-}
 
-/**
- * Update convert button state
- */
-function updateConvertButton() {
-  const canConvert = state.files.length > 0 && elements.formatSelect.value;
-  elements.convertBtn.disabled = !canConvert;
+    let perFileHtml = "";
+    if (state.usePerFileFormats) {
+      const outputs = getPipelineOutputs(pipeline);
+      const selected = state.perFileFormats[i] || state.selectedFormat || "";
+      perFileHtml = `<select class="fl-format" data-index="${i}">
+        <option value="">--</option>
+        ${outputs.map((o) => `<option value="${o.ext}"${o.ext === selected ? " selected" : ""}>${o.label}</option>`).join("")}
+      </select>`;
+    }
+
+    row.innerHTML = `
+      ${thumbHtml}
+      <div class="fl-info">
+        <span class="fl-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+        <span class="fl-meta">${formatFileSize(file.size)} · <span class="fl-badge">${PIPELINES[pipeline]?.label || ext}</span></span>
+      </div>
+      ${perFileHtml}
+      <button type="button" class="fl-remove" data-index="${i}" title="Remove">&times;</button>
+    `;
+    body.appendChild(row);
+  });
+
+  body.querySelectorAll(".fl-remove").forEach((btn) =>
+    btn.addEventListener("click", (e) => removeFile(parseInt(e.target.dataset.index))),
+  );
+  body.querySelectorAll(".fl-format").forEach((sel) =>
+    sel.addEventListener("change", (e) => {
+      state.perFileFormats[parseInt(e.target.dataset.index)] = e.target.value;
+      renderBatchConfirm();
+      updateConvertButton();
+    }),
+  );
 }
 
 // ========================================
 // Format Selection
 // ========================================
 
-/**
- * Handle format selection change
- */
+function updateFormatOptions() {
+  const formatSelect = elements.formatSelect;
+  const prev = formatSelect.value;
+  formatSelect.innerHTML = '<option value="">--Choose a format--</option>';
+
+  if (state.files.length === 0) {
+    state.selectedFormat = null;
+    return;
+  }
+
+  const activePipelines = new Set(
+    state.files.map((f) => detectPipeline(f)).filter(Boolean),
+  );
+
+  for (const [key, pipeline] of Object.entries(PIPELINES)) {
+    if (!activePipelines.has(key)) continue;
+    const group = document.createElement("optgroup");
+    group.label = pipeline.label;
+    for (const opt of pipeline.outputs) {
+      const option = document.createElement("option");
+      option.value = opt.ext;
+      option.textContent = opt.label;
+      group.appendChild(option);
+    }
+    formatSelect.appendChild(group);
+  }
+
+  if (prev && formatSelect.querySelector(`option[value="${prev}"]`)) {
+    formatSelect.value = prev;
+  }
+}
+
 function handleFormatChange() {
   elements.formatSelect.addEventListener("change", (e) => {
     state.selectedFormat = e.target.value;
-
-    // Show/hide compression settings based on format
-    if (elements.compressionSettings) {
-      if (state.selectedFormat) {
-        elements.compressionSettings.classList.remove("hidden");
-
-        // Show quality slider for images, bitrate for audio
-        const imageFormats = ["jpeg", "jpg", "png", "webp", "gif"];
-        const audioFormats = ["mp3", "wav", "ogg"];
-
-        if (imageFormats.includes(state.selectedFormat)) {
-          elements.imageQualityContainer.classList.remove("hidden");
-          elements.audioBitrateContainer.classList.add("hidden");
-        } else if (audioFormats.includes(state.selectedFormat)) {
-          elements.imageQualityContainer.classList.add("hidden");
-          elements.audioBitrateContainer.classList.remove("hidden");
-        }
-      } else {
-        elements.compressionSettings.classList.add("hidden");
-      }
-    }
-
+    updateCompressionUI();
+    renderBatchConfirm();
     updateConvertButton();
+    if (state.usePerFileFormats) renderFileList();
   });
 
-  // Quality slider change handler
   if (elements.qualitySlider && elements.qualityValue) {
     elements.qualitySlider.addEventListener("input", (e) => {
       elements.qualityValue.textContent = e.target.value;
     });
   }
+}
+
+function updateCompressionUI() {
+  const compressionEl = document.getElementById("compression-settings");
+  const qualityEl = document.getElementById("image-quality-container");
+  const bitrateEl = document.getElementById("audio-bitrate-container");
+  if (!compressionEl) return;
+
+  const fmt = state.selectedFormat;
+  if (!fmt) {
+    compressionEl.classList.add("hidden");
+    return;
+  }
+  const isImg = PIPELINES.image.outputs.some((o) => o.ext === fmt);
+  const isAud = PIPELINES.audio.outputs.some((o) => o.ext === fmt);
+  compressionEl.classList.toggle("hidden", !isImg && !isAud);
+  if (qualityEl) qualityEl.classList.toggle("hidden", !isImg);
+  if (bitrateEl) bitrateEl.classList.toggle("hidden", !isAud);
+}
+
+// ========================================
+// Batch Confirmation
+// ========================================
+
+function getFileFormat(index) {
+  if (state.usePerFileFormats && state.perFileFormats[index]) {
+    return state.perFileFormats[index];
+  }
+  return state.selectedFormat || "";
+}
+
+function renderBatchConfirm() {
+  const hasFormat = state.selectedFormat ||
+    (state.usePerFileFormats && Object.values(state.perFileFormats).some(Boolean));
+
+  if (!hasFormat || state.files.length === 0) {
+    elements.batchConfirm.classList.add("hidden");
+    return;
+  }
+
+  elements.batchConfirm.classList.remove("hidden");
+  const list = elements.batchList;
+  list.innerHTML = "";
+
+  let convertCount = 0;
+  let skipCount = 0;
+
+  state.files.forEach((file, i) => {
+    const pipeline = detectPipeline(file);
+    const fmt = getFileFormat(i);
+    const canConvert = fmt && pipeline && isFormatValidForPipeline(pipeline, fmt);
+
+    if (canConvert) convertCount++;
+    else skipCount++;
+
+    const row = document.createElement("div");
+    row.className = "bc-row" + (canConvert ? "" : " bc-skip");
+
+    const ext = getFileExtension(file.name).toUpperCase();
+    const targetLabel = fmt ? fmt.toUpperCase() : "—";
+    const statusIcon = canConvert ? "✓" : "—";
+
+    row.innerHTML = `
+      <span class="bc-status ${canConvert ? "bc-ok" : "bc-na"}">${statusIcon}</span>
+      <span class="bc-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+      <span class="bc-arrow">→</span>
+      <span class="bc-target">${canConvert ? "." + targetLabel : "skip"}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  elements.batchStats.textContent =
+    `${convertCount} to convert` + (skipCount ? `, ${skipCount} skipped` : "");
+
+  const btnText = elements.convertBtn.querySelector(".btn-text");
+  if (btnText) {
+    btnText.textContent = convertCount > 0
+      ? `Convert ${convertCount} file${convertCount !== 1 ? "s" : ""}`
+      : "Convert Files";
+  }
+}
+
+function updateConvertButton() {
+  let canConvert = false;
+  if (state.files.length > 0) {
+    for (let i = 0; i < state.files.length; i++) {
+      const fmt = getFileFormat(i);
+      const pipeline = detectPipeline(state.files[i]);
+      if (fmt && pipeline && isFormatValidForPipeline(pipeline, fmt)) {
+        canConvert = true;
+        break;
+      }
+    }
+  }
+  elements.convertBtn.disabled = !canConvert;
 }
 
 // ========================================
@@ -576,118 +1069,200 @@ function handleFormatChange() {
  * @param {string} targetFormat - Target format (jpeg, png, webp, gif)
  * @param {number} quality - Quality value from slider (10-100)
  */
-async function convertImage(file, targetFormat, quality = 80) {
+async function decodeHeic(file) {
+  const blob = await heic2any({ blob: file, toType: "image/png" });
+  return Array.isArray(blob) ? blob[0] : blob;
+}
+
+function loadImage(src) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-
-        const mimeType = getMimeType(targetFormat);
-        // Use quality slider value (convert 10-100 to 0.1-1.0)
-        const qualityValue = quality / 100;
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve({
-                blob: blob,
-                originalSize: file.size,
-                convertedSize: blob.size,
-              });
-              resolve(blob);
-            } else {
-              reject(new Error("Conversion failed"));
-            }
-          },
-          mimeType,
-          quality,
-        );
-      };
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = src;
   });
+}
+
+function imageToCanvas(img) {
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  canvas.getContext("2d").drawImage(img, 0, 0);
+  return canvas;
+}
+
+function encodeBmp(canvas) {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const pixels = imageData.data;
+
+  const rowSize = Math.ceil((width * 3) / 4) * 4;
+  const pixelDataSize = rowSize * height;
+  const fileSize = 54 + pixelDataSize;
+  const buf = new ArrayBuffer(fileSize);
+  const view = new DataView(buf);
+
+  view.setUint8(0, 0x42); // 'B'
+  view.setUint8(1, 0x4D); // 'M'
+  view.setUint32(2, fileSize, true);
+  view.setUint32(10, 54, true);
+  view.setUint32(14, 40, true);
+  view.setInt32(18, width, true);
+  view.setInt32(22, height, true);
+  view.setUint16(26, 1, true);
+  view.setUint16(28, 24, true);
+  view.setUint32(34, pixelDataSize, true);
+
+  for (let y = 0; y < height; y++) {
+    const rowStart = 54 + (height - 1 - y) * rowSize;
+    for (let x = 0; x < width; x++) {
+      const srcIdx = (y * width + x) * 4;
+      const dstIdx = rowStart + x * 3;
+      view.setUint8(dstIdx, pixels[srcIdx + 2]);     // B
+      view.setUint8(dstIdx + 1, pixels[srcIdx + 1]); // G
+      view.setUint8(dstIdx + 2, pixels[srcIdx]);     // R
+    }
+  }
+
+  return new Blob([buf], { type: "image/bmp" });
+}
+
+function encodeTiff(canvas) {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  const rgba = ctx.getImageData(0, 0, width, height).data;
+  const tiffData = UTIF.encodeImage(rgba, width, height);
+  return new Blob([tiffData], { type: "image/tiff" });
+}
+
+async function decodeTiffToCanvas(file) {
+  const buf = await file.arrayBuffer();
+  const ifds = UTIF.decode(buf);
+  UTIF.decodeImage(buf, ifds[0]);
+  const firstPage = ifds[0];
+  const rgba = UTIF.toRGBA8(firstPage);
+  const canvas = document.createElement("canvas");
+  canvas.width = firstPage.width;
+  canvas.height = firstPage.height;
+  const ctx = canvas.getContext("2d");
+  const imgData = ctx.createImageData(firstPage.width, firstPage.height);
+  imgData.data.set(rgba);
+  ctx.putImageData(imgData, 0, 0);
+  return canvas;
+}
+
+async function convertImage(file, targetFormat, quality = 80) {
+  const ext = getFileExtension(file.name);
+  let canvas;
+
+  if (ext === "heic" || ext === "heif") {
+    const decoded = await decodeHeic(file);
+    const url = URL.createObjectURL(decoded);
+    try {
+      canvas = imageToCanvas(await loadImage(url));
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  } else if (ext === "tiff" || ext === "tif") {
+    canvas = await decodeTiffToCanvas(file);
+  } else {
+    const url = URL.createObjectURL(file);
+    try {
+      canvas = imageToCanvas(await loadImage(url));
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  let outputBlob;
+  if (targetFormat === "bmp") {
+    outputBlob = encodeBmp(canvas);
+  } else if (targetFormat === "tiff") {
+    outputBlob = encodeTiff(canvas);
+  } else {
+    const mimeType = getMimeType(targetFormat);
+    const qualityValue = quality / 100;
+    outputBlob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("Conversion failed")),
+        mimeType,
+        qualityValue,
+      );
+    });
+  }
+
+  return { blob: outputBlob, originalSize: file.size, convertedSize: outputBlob.size };
 }
 
 /**
  * Main conversion function - Batch processing
  */
 async function convertFiles() {
-  if (state.files.length === 0 || !state.selectedFormat) {
-    return;
-  }
+  if (state.files.length === 0) return;
 
-  // Reset converted files array for batch
   state.convertedFiles = [];
-
+  const skipped = [];
   const totalFiles = state.files.length;
 
-  // Show loading state with batch info
   elements.convertBtn.disabled = true;
   elements.convertBtn.classList.add("processing");
-  elements.convertBtn.innerHTML = `
-        <span class="spinner"></span>
-        Converting 0/${totalFiles}...
-    `;
+  elements.convertBtn.innerHTML = `<span class="spinner"></span> Converting 0/${totalFiles}...`;
   showLoadingSpinner(0, totalFiles, "Starting...");
 
   try {
-    // Process files one by one (queue system, not parallel)
     for (let i = 0; i < state.files.length; i++) {
       const file = state.files[i];
+      const targetFormat = getFileFormat(i);
 
-      // Update progress: current file name and number processed
       const fileName =
         file.name.length > 20 ? file.name.substring(0, 17) + "..." : file.name;
-      elements.convertBtn.innerHTML = `
-            <span class="spinner"></span>
-            Converting ${i + 1}/${totalFiles}: ${fileName}
-        `;
+      elements.convertBtn.innerHTML = `<span class="spinner"></span> Converting ${i + 1}/${totalFiles}: ${fileName}`;
       showLoadingSpinner(i + 1, totalFiles, fileName);
 
-      let convertedResult;
-
-      if (isImage(file)) {
-        // Get quality from slider (default 80)
-        const quality = elements.qualitySlider
-          ? parseInt(elements.qualitySlider.value)
-          : 80;
-        convertedResult = await convertImage(
-          file,
-          state.selectedFormat,
-          quality,
-        );
-      } else if (isAudio(file)) {
-        // Get bitrate from select (default 128k)
-        const bitrate = elements.bitrateSelect
-          ? elements.bitrateSelect.value
-          : "128000";
-        // Use FFmpeg WASM for audio conversion
-        convertedResult = await convertAudioWithFFmpeg(
-          file,
-          state.selectedFormat,
-          bitrate,
-        );
-      } else {
-        // Video conversion is not yet supported client-side
-        console.warn(`Skipping ${file.name}: Video conversion not supported`);
+      const pipeline = detectPipeline(file);
+      if (!targetFormat || !pipeline || !isFormatValidForPipeline(pipeline, targetFormat)) {
+        skipped.push(file.name);
         continue;
       }
 
-      // Generate output filename
-      const originalName = file.name.replace(/\.[^/.]+$/, "");
-      const convertedFilename = `${originalName}.${state.selectedFormat}`;
+      let convertedResult;
 
-      // Store converted file with size info
+      switch (pipeline) {
+        case "image": {
+          const quality = elements.qualitySlider
+            ? parseInt(elements.qualitySlider.value) : 80;
+          convertedResult = await convertImage(file, targetFormat, quality);
+          break;
+        }
+        case "audio": {
+          const bitrate = elements.bitrateSelect
+            ? elements.bitrateSelect.value : "128000";
+          convertedResult = await convertAudioWithFFmpeg(file, targetFormat, bitrate);
+          break;
+        }
+        case "code":
+          convertedResult = await convertCodeText(file, targetFormat);
+          break;
+        case "spreadsheet":
+          convertedResult = await convertSpreadsheet(file, targetFormat);
+          break;
+        case "archive":
+          convertedResult = await convertArchive(file, targetFormat);
+          break;
+        case "video":
+        case "document":
+        case "presentation":
+          skipped.push(`${file.name} (${PIPELINES[pipeline].label} pipeline not yet implemented)`);
+          continue;
+        default:
+          skipped.push(file.name);
+          continue;
+      }
+
+      const originalName = file.name.replace(/\.[^/.]+$/, "");
+      const convertedFilename = `${originalName}.${targetFormat}`;
+
       state.convertedFiles.push({
         blob: convertedResult.blob,
         filename: convertedFilename,
@@ -696,10 +1271,15 @@ async function convertFiles() {
       });
     }
 
-    // Show result for batch
     if (state.convertedFiles.length > 0) {
       showBatchResults(state.convertedFiles);
-    } else {
+    }
+    if (skipped.length > 0) {
+      const msg = state.convertedFiles.length > 0
+        ? `Skipped ${skipped.length} file(s):\n${skipped.join("\n")}`
+        : `No files converted.\n${skipped.join("\n")}`;
+      alert(msg);
+    } else if (state.convertedFiles.length === 0) {
       alert("No files were successfully converted.");
     }
   } catch (error) {
@@ -822,6 +1402,39 @@ function showBatchResults(files) {
       convertedSize: file.convertedSize,
     });
   });
+
+  if (files.length > 1 && typeof JSZip !== "undefined") {
+    const zipBtn = document.createElement("button");
+    zipBtn.className = "convert-btn";
+    zipBtn.style.marginTop = "1rem";
+    zipBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      <span class="btn-text">Download All as ZIP</span>
+    `;
+    zipBtn.type = "button";
+    zipBtn.addEventListener("click", async () => {
+      zipBtn.disabled = true;
+      zipBtn.querySelector(".btn-text").textContent = "Creating ZIP...";
+      try {
+        const zip = new JSZip();
+        files.forEach((f) => zip.file(f.filename, f.blob));
+        const zipBlob = await zip.generateAsync({
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 },
+        });
+        downloadBlob(zipBlob, "converted-files.zip");
+      } finally {
+        zipBtn.disabled = false;
+        zipBtn.querySelector(".btn-text").textContent = "Download All as ZIP";
+      }
+    });
+    elements.resultContainer.appendChild(zipBtn);
+  }
 }
 
 /**
@@ -895,22 +1508,32 @@ function downloadFile() {
  * Initialize all event listeners
  */
 function initEventListeners() {
-  // File input change
   elements.fileInput.addEventListener("change", (e) => {
     handleFiles(e.target.files);
   });
 
-  // Format selection
   handleFormatChange();
 
-  // Convert button
   elements.convertBtn.addEventListener("click", convertFiles);
-
-  // Download button
   elements.downloadBtn.addEventListener("click", downloadFile);
-
-  // Clear history button
   elements.clearHistoryBtn.addEventListener("click", clearHistory);
+
+  elements.fileListToggle.addEventListener("click", () => {
+    const body = elements.fileListBody;
+    const open = !body.classList.contains("hidden");
+    body.classList.toggle("hidden", open);
+    elements.fileListToggle.querySelector(".chevron").textContent = open ? "▾" : "▴";
+  });
+
+  elements.clearFilesBtn.addEventListener("click", clearAllFiles);
+
+  elements.advancedToggle.addEventListener("change", (e) => {
+    state.usePerFileFormats = e.target.checked;
+    elements.formatSelect.closest(".format-global").classList.toggle("hidden", state.usePerFileFormats);
+    renderFileList();
+    renderBatchConfirm();
+    updateConvertButton();
+  });
 }
 
 // ========================================
@@ -935,47 +1558,67 @@ function init() {
 /**
  * Initialize theme toggle
  */
+function applyTheme(theme) {
+  if (theme && theme !== "light") {
+    document.documentElement.setAttribute("data-theme", theme);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  localStorage.setItem("theme", theme || "light");
+}
+
 function initTheme() {
-  const savedTheme = localStorage.getItem("theme") || "light";
-  if (savedTheme === "dark") {
-    document.documentElement.setAttribute("data-theme", "dark");
-  }
+  const saved = localStorage.getItem("theme") || "light";
+  applyTheme(saved);
 
-  if (elements.themeToggle) {
-    elements.themeToggle.addEventListener("click", () => {
-      const currentTheme = document.documentElement.getAttribute("data-theme");
-      const newTheme = currentTheme === "dark" ? "light" : "dark";
+  if (!elements.themeToggle) return;
 
-      if (newTheme === "dark") {
-        document.documentElement.setAttribute("data-theme", "dark");
-      } else {
-        document.documentElement.removeAttribute("data-theme");
-      }
+  const clicks = [];
 
-      localStorage.setItem("theme", newTheme);
-    });
-  }
+  elements.themeToggle.addEventListener("click", () => {
+    const now = Date.now();
+    clicks.push(now);
+    while (clicks.length && now - clicks[0] > 1500) clicks.shift();
+
+    if (clicks.length >= 5) {
+      clicks.length = 0;
+      applyTheme("grey");
+      elements.themeToggle.classList.add("secret-pulse");
+      setTimeout(() => elements.themeToggle.classList.remove("secret-pulse"), 600);
+      return;
+    }
+
+    const cur = document.documentElement.getAttribute("data-theme") || "light";
+    if (cur === "grey") {
+      applyTheme("light");
+    } else {
+      applyTheme(cur === "dark" ? "light" : "dark");
+    }
+  });
 }
 
 /**
  * Show loading spinner during conversion
  */
 function showLoadingSpinner(current, total, filename) {
-  if (elements.loadingSpinner) {
-    elements.loadingSpinner.classList.remove("hidden");
-    if (elements.progressText) {
-      elements.progressText.textContent = `Converting ${current}/${total}: ${filename}`;
-    }
+  if (!elements.loadingSpinner) return;
+  elements.loadingSpinner.classList.remove("hidden");
+  const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+  if (elements.progressText) {
+    elements.progressText.textContent = `${current}/${total}: ${filename}`;
+  }
+  if (elements.progressBar) {
+    elements.progressBar.style.width = pct + "%";
+  }
+  if (elements.progressPct) {
+    elements.progressPct.textContent = pct + "%";
   }
 }
 
-/**
- * Hide loading spinner
- */
 function hideLoadingSpinner() {
-  if (elements.loadingSpinner) {
-    elements.loadingSpinner.classList.add("hidden");
-  }
+  if (!elements.loadingSpinner) return;
+  elements.loadingSpinner.classList.add("hidden");
+  if (elements.progressBar) elements.progressBar.style.width = "0%";
 }
 
 // Start the application when DOM is ready
