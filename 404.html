@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 — Page Not Found</title>
+    <link rel="icon" type="image/x-icon" href="ke.ico" />
+    <style>
+      :root {
+        --base: #eae6e1;
+        --sh-dark: #c8c2ba;
+        --sh-light: #ffffff;
+        --text-1: #2a2520;
+        --text-2: #6e665e;
+        --text-3: #9a948c;
+        --accent: #5b5ef0;
+        --accent-hover: #4a4de0;
+        --r: 16px;
+        --r-sm: 10px;
+        --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--base);
+        font-family:
+          "Segoe UI",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        padding: 1.25rem;
+      }
+
+      .card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.25rem;
+        max-width: 400px;
+        width: 100%;
+        padding: 2.5rem 2rem;
+        border-radius: var(--r);
+        background: var(--base);
+        box-shadow:
+          8px 8px 16px var(--sh-dark),
+          -8px -8px 16px var(--sh-light);
+      }
+
+      .icon {
+        width: 56px;
+        height: 56px;
+        object-fit: contain;
+        border-radius: 30%;
+        filter: drop-shadow(2px 2px 4px var(--sh-dark));
+        opacity: 0.8;
+      }
+
+      .code {
+        font-size: 4.5rem;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        color: var(--text-3);
+      }
+
+      .groove {
+        width: 55%;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--base);
+        box-shadow:
+          inset 2px 2px 4px var(--sh-dark),
+          inset -2px -2px 4px var(--sh-light);
+      }
+
+      .msg {
+        font-size: 0.92rem;
+        color: var(--text-2);
+        text-align: center;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 0.25rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.65rem 1.4rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border: none;
+        border-radius: var(--r-sm);
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow:
+          5px 5px 10px var(--sh-dark),
+          -5px -5px 10px var(--sh-light);
+        transition:
+          box-shadow 0.2s var(--ease),
+          transform 0.15s var(--ease),
+          background 0.15s;
+      }
+
+      .btn:hover {
+        box-shadow:
+          7px 7px 14px var(--sh-dark),
+          -7px -7px 14px var(--sh-light);
+        transform: translateY(-1px);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+        box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      .btn-primary {
+        color: #fff;
+        background: var(--accent);
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+      }
+
+      .btn-secondary {
+        color: var(--text-1);
+        background: var(--base);
+      }
+
+      .btn svg {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="ke.ico" alt="" class="icon" draggable="false" />
+      <h1 class="code">404</h1>
+      <div class="groove"></div>
+      <p class="msg">This page doesn't exist — but here's where you can go.</p>
+      <div class="actions">
+        <a href="/" class="btn btn-primary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+          TypeConverter
+        </a>
+        <a href="https://kruthik.vercel.app" class="btn btn-secondary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          Portfolio
+        </a>
+      </div>
+    </div>
+  </body>
+</html>
