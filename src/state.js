@@ -1,6 +1,6 @@
 export const MAX_FILES = 100;
 export const MAX_TOTAL_SIZE = 500 * 1024 * 1024;
-export const MAX_FILE_SIZE = 100 * 1024 * 1024;
+export const MAX_FILE_SIZE = 500 * 1024 * 1024;
 export const HISTORY_KEY = 'fileConverterHistory';
 
 export const state = {

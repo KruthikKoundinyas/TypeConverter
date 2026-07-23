@@ -48,8 +48,10 @@ export function updateCompressionUI() {
   }
   const isImg = PIPELINES.image.outputs.some((o) => o.ext === fmt);
   const isAud = PIPELINES.audio.outputs.some((o) => o.ext === fmt);
-  compressionEl.classList.toggle('hidden', !isImg && !isAud);
-  if (qualityEl) qualityEl.classList.toggle('hidden', !isImg);
+  const isVid = PIPELINES.video.outputs.some((o) => o.ext === fmt);
+  const showQuality = isImg || isVid;
+  compressionEl.classList.toggle('hidden', !showQuality && !isAud);
+  if (qualityEl) qualityEl.classList.toggle('hidden', !showQuality);
   if (bitrateEl) bitrateEl.classList.toggle('hidden', !isAud);
 }
 

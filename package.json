@@ -6,6 +6,6 @@
   },
   "keywords": [],
   "author": "Koundinyas",
-  "license": "ISC",
+  "license": "MIT",
   "description": "Privacy-first file converter — runs entirely in the browser, no uploads"
 }

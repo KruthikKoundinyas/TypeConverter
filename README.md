@@ -157,7 +157,7 @@ Messy problem → Abstraction → Architecture decisions → Tradeoffs → Shipp
 
 ## License
 
-ISC
+MIT
 
 ## Author
 

@@ -11,6 +11,7 @@ export const PIPELINES = {
       { ext: 'gif', label: 'GIF' },
       { ext: 'bmp', label: 'BMP' },
       { ext: 'tiff', label: 'TIFF' },
+      { ext: 'ico', label: 'ICO (favicon)' },
     ],
   },
   audio: {
@@ -36,9 +37,8 @@ export const PIPELINES = {
   },
   document: {
     label: 'Documents',
-    extensions: ['pdf', 'doc', 'docx', 'rtf', 'odt', 'epub'],
+    extensions: ['pdf', 'docx'],
     outputs: [
-      { ext: 'pdf', label: 'PDF' },
       { ext: 'txt', label: 'Plain Text' },
       { ext: 'html', label: 'HTML' },
     ],

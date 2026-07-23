@@ -5,6 +5,8 @@ import { convertAudioWithFFmpeg } from './pipelines/audio.js';
 import { convertCodeText } from './pipelines/code.js';
 import { convertSpreadsheet } from './pipelines/spreadsheet.js';
 import { convertArchive } from './pipelines/archive.js';
+import { convertVideo } from './pipelines/video.js';
+import { convertDocument } from './pipelines/document.js';
 import { getFileFormat } from './ui/batch.js';
 import { showLoadingSpinner, hideLoadingSpinner } from './ui/progress.js';
 import { showBatchResults } from './ui/results.js';
@@ -58,8 +60,14 @@ export async function convertFiles() {
         case 'archive':
           convertedResult = await convertArchive(file, targetFormat);
           break;
-        case 'video':
+        case 'video': {
+          const quality = elements.qualitySlider ? parseInt(elements.qualitySlider.value) : 80;
+          convertedResult = await convertVideo(file, targetFormat, { quality });
+          break;
+        }
         case 'document':
+          convertedResult = await convertDocument(file, targetFormat);
+          break;
         case 'presentation':
           skipped.push(`${file.name} (${PIPELINES[pipeline].label} pipeline not yet implemented)`);
           continue;

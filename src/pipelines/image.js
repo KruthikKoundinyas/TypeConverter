@@ -83,6 +83,52 @@ async function decodeTiffToCanvas(file) {
   return canvas;
 }
 
+function encodeIco(canvas) {
+  const sizes = [32, 16];
+  const pngs = sizes.map((size) => {
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    c.getContext('2d').drawImage(canvas, 0, 0, size, size);
+    const dataUrl = c.toDataURL('image/png');
+    const binary = atob(dataUrl.split(',')[1]);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { size, data: bytes };
+  });
+
+  const headerSize = 6;
+  const dirEntrySize = 16;
+  const dirSize = dirEntrySize * pngs.length;
+  let offset = headerSize + dirSize;
+  const totalSize = offset + pngs.reduce((sum, p) => sum + p.data.length, 0);
+  const buf = new ArrayBuffer(totalSize);
+  const view = new DataView(buf);
+
+  // ICONDIR header
+  view.setUint16(0, 0, true);      // reserved
+  view.setUint16(2, 1, true);      // type: 1 = ICO
+  view.setUint16(4, pngs.length, true);
+
+  // ICONDIRENTRY for each image + copy PNG data
+  const u8 = new Uint8Array(buf);
+  pngs.forEach((png, i) => {
+    const dirOff = headerSize + i * dirEntrySize;
+    view.setUint8(dirOff, png.size < 256 ? png.size : 0);      // width
+    view.setUint8(dirOff + 1, png.size < 256 ? png.size : 0);  // height
+    view.setUint8(dirOff + 2, 0);   // color palette
+    view.setUint8(dirOff + 3, 0);   // reserved
+    view.setUint16(dirOff + 4, 1, true);  // color planes
+    view.setUint16(dirOff + 6, 32, true); // bits per pixel
+    view.setUint32(dirOff + 8, png.data.length, true);
+    view.setUint32(dirOff + 12, offset, true);
+    u8.set(png.data, offset);
+    offset += png.data.length;
+  });
+
+  return new Blob([buf], { type: 'image/x-icon' });
+}
+
 export async function convertImage(file, targetFormat, quality = 80) {
   const ext = getFileExtension(file.name);
   let canvas;
@@ -107,7 +153,9 @@ export async function convertImage(file, targetFormat, quality = 80) {
   }
 
   let outputBlob;
-  if (targetFormat === 'bmp') {
+  if (targetFormat === 'ico') {
+    outputBlob = encodeIco(canvas);
+  } else if (targetFormat === 'bmp') {
     outputBlob = encodeBmp(canvas);
   } else if (targetFormat === 'tiff') {
     outputBlob = encodeTiff(canvas);
